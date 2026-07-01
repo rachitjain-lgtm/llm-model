@@ -6,13 +6,14 @@ import ChatWindow from "./components/ChatWindow";
 import PromptComposer from "./components/PromptComposer";
 import RightPanel from "./components/RightPanel";
 import SettingsModal from "./components/SettingsModal";
+import Login from "./components/Login";
 import { setSidebarOpen } from "./store/uiSlice";
 
 function App() {
   const dispatch = useDispatch();
   const sidebarOpen = useSelector((state) => state.ui.sidebarOpen);
-  const rightPanelOpen = useSelector((state) => state.ui.rightPanelOpen);
   const theme = useSelector((state) => state.ui.theme);
+  const isAuthenticated = useSelector((state) => state.auth.isAuthenticated);
 
   useEffect(() => {
     if (theme === "dark") {
@@ -21,6 +22,10 @@ function App() {
       document.documentElement.classList.remove("dark");
     }
   }, [theme]);
+
+  if (!isAuthenticated) {
+    return <Login />;
+  }
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-[#F5F7F7] dark:bg-[#0f1214] text-[#171717] dark:text-[#eceff1] transition-colors duration-200">

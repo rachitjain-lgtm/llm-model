@@ -10,7 +10,8 @@ import {
   Building,
   Check, 
   X,
-  ArrowRight
+  ArrowRight,
+  LogOut
 } from "lucide-react";
 import { 
   setActiveConversation, 
@@ -20,6 +21,7 @@ import {
   setSearchQuery 
 } from "../store/chatSlice";
 import { toggleSidebar, setSettingsModalOpen } from "../store/uiSlice";
+import { logout } from "../store/authSlice";
 
 export default function Sidebar() {
   const dispatch = useDispatch();
@@ -27,6 +29,7 @@ export default function Sidebar() {
   const activeId = useSelector(state => state.chat.activeConversationId);
   const searchQuery = useSelector(state => state.chat.searchQuery);
   const sidebarOpen = useSelector(state => state.ui.sidebarOpen);
+  const user = useSelector(state => state.auth.user);
 
   const [editingId, setEditingId] = useState(null);
   const [editTitle, setEditTitle] = useState("");
@@ -207,6 +210,28 @@ export default function Sidebar() {
 
       {/* Bottom section */}
       <div className="p-4 border-t border-[#262626] bg-[#121212] space-y-1">
+        {/* User Profile & Logout */}
+        {user && (
+          <div className="flex items-center justify-between p-2.5 rounded-lg bg-[#1a1a1a]/40 border border-[#262626] mb-1">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-8 h-8 rounded-lg bg-[#245955] flex items-center justify-center font-bold text-xs text-white uppercase select-none">
+                {user.name.substring(0, 2)}
+              </div>
+              <div className="min-w-0">
+                <div className="text-xs font-semibold truncate text-white">{user.name}</div>
+                <div className="text-[10px] text-[#737373] truncate">{user.email}</div>
+              </div>
+            </div>
+            <button 
+              onClick={() => dispatch(logout())}
+              title="Sign Out"
+              className="p-1.5 rounded-md hover:bg-[#262626] text-[#737373] hover:text-red-400 transition-colors cursor-pointer"
+            >
+              <LogOut size={14} />
+            </button>
+          </div>
+        )}
+
         {/* Workspace Card */}
         <div className="flex items-center justify-between p-2.5 rounded-lg hover:bg-[#262626] cursor-pointer transition-colors">
           <div className="flex items-center gap-2.5 min-w-0">
