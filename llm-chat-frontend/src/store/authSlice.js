@@ -1,21 +1,40 @@
 import { createSlice } from "@reduxjs/toolkit";
 
-const storedUser = typeof window !== "undefined" ? localStorage.getItem("user") : null;
+const getStoredUser = () => {
+  if (typeof window !== "undefined") {
+    const user = localStorage.getItem("user");
+    return user ? JSON.parse(user) : null;
+  }
+  return null;
+};
+
+const getStoredUsersDb = () => {
+  if (typeof window !== "undefined") {
+    const db = localStorage.getItem("users_db");
+    return db ? JSON.parse(db) : [
+      { email: "demo@bedrock.com", password: "password123", name: "Demo User" }
+    ];
+  }
+  return [];
+};
 
 const initialState = {
-  isAuthenticated: !!storedUser,
-  user: storedUser ? JSON.parse(storedUser) : null,
+  isAuthenticated: !!getStoredUser(),
+  user: getStoredUser(),
+  usersDb: getStoredUsersDb(),
   isLoading: false,
-  error: null
+  error: null,
+  recoveryEmailSent: false
 };
 
 const authSlice = createSlice({
   name: "auth",
   initialState,
   reducers: {
-    loginStart(state) {
+    authStart(state) {
       state.isLoading = true;
       state.error = null;
+      state.recoveryEmailSent = false;
     },
     loginSuccess(state, action) {
       state.isLoading = false;
@@ -24,29 +43,42 @@ const authSlice = createSlice({
       state.error = null;
       localStorage.setItem("user", JSON.stringify(action.payload));
     },
-    loginFailure(state, action) {
+    authFailure(state, action) {
       state.isLoading = false;
-      state.isAuthenticated = false;
-      state.user = null;
       state.error = action.payload;
+    },
+    registerSuccess(state, action) {
+      state.isLoading = false;
+      state.usersDb.push(action.payload);
+      localStorage.setItem("users_db", JSON.stringify(state.usersDb));
+      state.error = null;
+    },
+    recoverySuccess(state) {
+      state.isLoading = false;
+      state.recoveryEmailSent = true;
+      state.error = null;
     },
     logout(state) {
       state.isLoading = false;
       state.isAuthenticated = false;
       state.user = null;
       state.error = null;
+      state.recoveryEmailSent = false;
       localStorage.removeItem("user");
     },
     clearError(state) {
       state.error = null;
+      state.recoveryEmailSent = false;
     }
   }
 });
 
 export const {
-  loginStart,
+  authStart,
   loginSuccess,
-  loginFailure,
+  authFailure,
+  registerSuccess,
+  recoverySuccess,
   logout,
   clearError
 } = authSlice.actions;
