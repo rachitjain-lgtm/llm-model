@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from "react";
+import { useRef, useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { 
   Menu, 
@@ -24,6 +24,7 @@ import {
   renameChat, 
   toggleStreaming 
 } from "../store/chatSlice";
+import { MODEL_OPTIONS, getModelLabel } from "../config/models";
 
 export default function Topbar() {
   const dispatch = useDispatch();
@@ -56,12 +57,6 @@ export default function Topbar() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [dispatch]);
 
-  useEffect(() => {
-    if (activeChat) {
-      setTitleInput(activeChat.title);
-    }
-  }, [activeChat]);
-
   if (!activeChat) {
     return (
       <div className="h-16 border-b border-[#E7E7E7] dark:border-[#23272A] bg-white dark:bg-[#16191B] flex items-center px-6 transition-colors duration-200">
@@ -83,18 +78,9 @@ export default function Topbar() {
     setIsEditingTitle(false);
   };
 
-  const models = [
-    "Claude 3 Sonnet",
-    "Claude 3 Haiku",
-    "Llama 3 70B",
-    "Titan Text G1 - Premier"
-  ];
-
   const regions = [
-    "us-east-1",
-    "us-west-2",
-    "eu-west-1",
-    "ap-northeast-1"
+    "global",
+    "auto"
   ];
 
   return (
@@ -128,7 +114,10 @@ export default function Topbar() {
                 {activeChat.title}
               </h2>
               <button 
-                onClick={() => setIsEditingTitle(true)}
+                onClick={() => {
+                  setTitleInput(activeChat.title);
+                  setIsEditingTitle(true);
+                }}
                 className="p-1 rounded text-[#737373] dark:text-[#94A3B8] hover:text-[#171717] dark:hover:text-[#ECEFF1] hover:bg-slate-100 dark:hover:bg-[#23272A] transition-colors"
                 title="Edit Title"
               >
@@ -148,31 +137,31 @@ export default function Topbar() {
             onClick={() => dispatch(toggleModelDropdown())}
             className="h-10 px-3.5 border border-[#E7E7E7] dark:border-[#23272A] hover:border-[#cbd5e1] dark:hover:border-zinc-700 rounded-lg bg-white dark:bg-[#16191B] flex items-center gap-2 text-xs font-semibold text-[#171717] dark:text-[#ECEFF1] shadow-sm transition-colors cursor-pointer"
           >
-            <span>{activeChat.model}</span>
+            <span>{getModelLabel(activeChat.model)}</span>
             <ChevronDown size={14} className={`text-[#737373] dark:text-[#94A3B8] transition-transform duration-200 ${modelDropdownOpen ? 'rotate-180' : ''}`} />
           </button>
 
           {modelDropdownOpen && (
             <div className="absolute right-0 mt-1.5 w-60 bg-white dark:bg-[#1E2326] border border-[#E7E7E7] dark:border-[#23272A] rounded-lg shadow-lg py-1.5 z-50 transition-colors">
-              {models.map((m) => (
+              {MODEL_OPTIONS.map((model) => (
                 <button
-                  key={m}
+                  key={model.id}
                   onClick={() => {
-                    dispatch(updateChatSettings({ id: activeChat.id, key: "model", value: m }));
+                    dispatch(updateChatSettings({ id: activeChat.id, key: "model", value: model.id }));
                     dispatch(setModelDropdownOpen(false));
                   }}
                   className="w-full px-4 py-2.5 text-xs text-left hover:bg-[#FAFAFA] dark:hover:bg-[#23272A] flex items-center justify-between cursor-pointer"
                 >
-                  <span className={activeChat.model === m ? "font-semibold text-[#245955] dark:text-[#347d78]" : "text-[#737373] dark:text-[#94A3B8]"}>
-                    {m}
+                  <span className={activeChat.model === model.id ? "font-semibold text-[#245955] dark:text-[#347d78]" : "text-[#737373] dark:text-[#94A3B8]"}>
+                    {model.label}
                   </span>
-                  {activeChat.model === m && <Check size={14} className="text-[#245955] dark:text-[#347d78]" />}
+                  {activeChat.model === model.id && <Check size={14} className="text-[#245955] dark:text-[#347d78]" />}
                 </button>
               ))}
               <div className="border-t border-[#E7E7E7] dark:border-[#23272A] mt-1.5 pt-1.5 px-4 pb-0.5">
-                <button className="text-[11px] font-semibold text-[#245955] dark:text-[#347d78] hover:text-[#1d4643] dark:hover:text-[#2b6763] cursor-pointer">
-                  View all models
-                </button>
+                <div className="text-[10px] text-[#737373] dark:text-[#94A3B8] leading-normal">
+                  Preset model IDs for free-tier testing.
+                </div>
               </div>
             </div>
           )}

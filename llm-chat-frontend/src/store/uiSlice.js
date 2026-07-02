@@ -1,15 +1,65 @@
 import { createSlice } from "@reduxjs/toolkit";
 
+const defaultApiSettings = {
+  apiKey: "",
+  appName: import.meta.env.VITE_APP_NAME || "AI Studio",
+  providerName: "OpenRouter",
+  apiBaseUrl: import.meta.env.VITE_OPENROUTER_API_URL || "https://openrouter.ai/api/v1/chat/completions"
+};
+
+const getStoredApiSettings = () => {
+  if (typeof window === "undefined") {
+    return defaultApiSettings;
+  }
+
+  const saved = localStorage.getItem("api_settings");
+
+  if (!saved) {
+    return {
+      ...defaultApiSettings,
+      apiKey: import.meta.env.VITE_OPENROUTER_API_KEY || ""
+    };
+  }
+
+  try {
+    return {
+      ...defaultApiSettings,
+      ...JSON.parse(saved)
+    };
+  } catch {
+    return defaultApiSettings;
+  }
+};
+
+const persistApiSettings = (state) => {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  localStorage.setItem("api_settings", JSON.stringify({
+    apiKey: state.apiKey,
+    appName: state.appName,
+    providerName: state.providerName,
+    apiBaseUrl: state.apiBaseUrl
+  }));
+};
+
+const storedApiSettings = getStoredApiSettings();
+
 const initialState = {
   sidebarOpen: true,
   rightPanelOpen: true,
   modelDropdownOpen: false,
   regionDropdownOpen: false,
   kbDropdownOpen: false,
-  activeKbId: "kb-3e7f2a1", // Default is Product Docs KB
+  activeKbId: "kb-3e7f2a1",
   theme: typeof window !== "undefined" ? (localStorage.getItem("theme") || "light") : "light",
   settingsModalOpen: false,
-  promptLibraryModalOpen: false
+  promptLibraryModalOpen: false,
+  apiKey: storedApiSettings.apiKey,
+  appName: storedApiSettings.appName,
+  providerName: storedApiSettings.providerName,
+  apiBaseUrl: storedApiSettings.apiBaseUrl
 };
 
 const uiSlice = createSlice({
@@ -69,6 +119,14 @@ const uiSlice = createSlice({
     },
     setPromptLibraryModalOpen(state, action) {
       state.promptLibraryModalOpen = action.payload;
+    },
+    setApiKey(state, action) {
+      state.apiKey = action.payload;
+      persistApiSettings(state);
+    },
+    setAppName(state, action) {
+      state.appName = action.payload;
+      persistApiSettings(state);
     }
   }
 });
@@ -90,7 +148,9 @@ export const {
   toggleSettingsModal,
   setSettingsModalOpen,
   togglePromptLibraryModal,
-  setPromptLibraryModalOpen
+  setPromptLibraryModalOpen,
+  setApiKey,
+  setAppName
 } = uiSlice.actions;
 
 export default uiSlice.reducer;

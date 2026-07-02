@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { 
   ThumbsUp, 
   ThumbsDown, 
@@ -6,7 +6,6 @@ import {
   Check, 
   ExternalLink,
   Info,
-  Paperclip,
   FileText,
   Image as ImageIcon,
   FileCode,

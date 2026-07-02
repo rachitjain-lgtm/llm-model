@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { X, Search, BookOpen, Sparkles, Code, Database, FileText, Share2, Check } from "lucide-react";
 import { setPromptLibraryModalOpen } from "../store/uiSlice";

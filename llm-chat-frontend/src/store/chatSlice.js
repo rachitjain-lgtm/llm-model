@@ -1,7 +1,7 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import { chatApi } from "../api/chatApi";
+import { DEFAULT_MODEL_ID } from "../config/models";
 
-// Async thunk to fetch chats from MongoDB
 export const fetchChats = createAsyncThunk("chat/fetchChats", async (_, { rejectWithValue }) => {
   try {
     const chats = await chatApi.fetchUserChats();
@@ -11,7 +11,6 @@ export const fetchChats = createAsyncThunk("chat/fetchChats", async (_, { reject
   }
 });
 
-// Async thunk to create a new chat in MongoDB
 export const createChatAsync = createAsyncThunk("chat/createChatAsync", async (chatData, { rejectWithValue }) => {
   try {
     const newChat = await chatApi.createChat(chatData || {});
@@ -21,7 +20,6 @@ export const createChatAsync = createAsyncThunk("chat/createChatAsync", async (c
   }
 });
 
-// Async thunk to delete a chat from MongoDB
 export const deleteChatAsync = createAsyncThunk("chat/deleteChatAsync", async (chatId, { rejectWithValue }) => {
   try {
     await chatApi.deleteChat(chatId);
@@ -31,7 +29,6 @@ export const deleteChatAsync = createAsyncThunk("chat/deleteChatAsync", async (c
   }
 });
 
-// Async thunk to rename a chat in MongoDB
 export const renameChatAsync = createAsyncThunk("chat/renameChatAsync", async ({ id, title }, { rejectWithValue }) => {
   try {
     await chatApi.renameChat(id, title);
@@ -41,7 +38,6 @@ export const renameChatAsync = createAsyncThunk("chat/renameChatAsync", async ({
   }
 });
 
-// Async thunk to add user message in MongoDB
 export const addMessageAsync = createAsyncThunk("chat/addMessageAsync", async ({ chatId, sender, content }, { rejectWithValue }) => {
   try {
     const message = await chatApi.saveMessage(chatId, { sender, content });
@@ -51,13 +47,45 @@ export const addMessageAsync = createAsyncThunk("chat/addMessageAsync", async ({
   }
 });
 
+const getStoredConversations = () => {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  const saved = localStorage.getItem("chat_conversations");
+
+  if (!saved) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(saved);
+  } catch {
+    return null;
+  }
+};
+
+const persistState = (state) => {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  localStorage.setItem("chat_conversations", JSON.stringify(state.conversations));
+  localStorage.setItem("chat_active_conversation_id", state.activeConversationId || "");
+};
+
+const storedConversations = getStoredConversations();
+const storedActiveConversationId = typeof window !== "undefined"
+  ? localStorage.getItem("chat_active_conversation_id")
+  : null;
+
 const initialState = {
-  conversations: [],
-  activeConversationId: null,
+  conversations: storedConversations || [],
+  activeConversationId: storedActiveConversationId || null,
   searchQuery: "",
   streamingOn: true,
   isLoading: false,
-  error: null,
+  error: null
 };
 
 const chatSlice = createSlice({
@@ -69,19 +97,21 @@ const chatSlice = createSlice({
       if (action.payload.length > 0 && !state.activeConversationId) {
         state.activeConversationId = action.payload[0].id;
       }
+      persistState(state);
     },
     setActiveConversation(state, action) {
       state.activeConversationId = action.payload;
+      persistState(state);
     },
     createNewChat(state) {
       const id = `chat-${Date.now()}`;
       const newChat = {
         id,
-        title: "New Conversation",
-        timestamp: "Today, " + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        model: "Claude 3 Sonnet",
-        provider: "Cloud AI",
-        region: "us-east-1",
+        title: "New chat",
+        timestamp: "Today, " + new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        model: DEFAULT_MODEL_ID,
+        provider: "OpenRouter",
+        region: "global",
         temperature: 0.7,
         maxTokens: 4096,
         useKnowledgeBase: false,
@@ -90,25 +120,29 @@ const chatSlice = createSlice({
       };
       state.conversations.unshift(newChat);
       state.activeConversationId = id;
+      persistState(state);
     },
     deleteChat(state, action) {
-      state.conversations = state.conversations.filter(c => c.id !== action.payload);
+      state.conversations = state.conversations.filter((conversation) => conversation.id !== action.payload);
       if (state.activeConversationId === action.payload) {
         state.activeConversationId = state.conversations[0]?.id || null;
       }
+      persistState(state);
     },
     renameChat(state, action) {
       const { id, title } = action.payload;
-      const chat = state.conversations.find(c => c.id === id);
+      const chat = state.conversations.find((conversation) => conversation.id === id);
       if (chat) {
         chat.title = title;
+        persistState(state);
       }
     },
     updateChatSettings(state, action) {
       const { id, key, value } = action.payload;
-      const chat = state.conversations.find(c => c.id === id);
+      const chat = state.conversations.find((conversation) => conversation.id === id);
       if (chat) {
         chat[key] = value;
+        persistState(state);
       }
     },
     setSearchQuery(state, action) {
@@ -122,36 +156,42 @@ const chatSlice = createSlice({
     },
     addMessage(state, action) {
       const { chatId, message } = action.payload;
-      const chat = state.conversations.find(c => c.id === chatId);
+      const chat = state.conversations.find((conversation) => conversation.id === chatId);
       if (chat) {
         chat.messages.push(message);
+        persistState(state);
       }
     },
     updateLastMessageText(state, action) {
       const { chatId, text } = action.payload;
-      const chat = state.conversations.find(c => c.id === chatId);
+      const chat = state.conversations.find((conversation) => conversation.id === chatId);
       if (chat && chat.messages.length > 0) {
         const lastMsg = chat.messages[chat.messages.length - 1];
         if (lastMsg.sender === "assistant") {
           lastMsg.text = text;
+          persistState(state);
         }
       }
     },
     addSourceToLastMessage(state, action) {
       const { chatId, source } = action.payload;
-      const chat = state.conversations.find(c => c.id === chatId);
+      const chat = state.conversations.find((conversation) => conversation.id === chatId);
       if (chat && chat.messages.length > 0) {
         const lastMsg = chat.messages[chat.messages.length - 1];
         if (lastMsg.sender === "assistant") {
           if (!lastMsg.sources) lastMsg.sources = [];
           lastMsg.sources.push(source);
+          persistState(state);
         }
       }
+    },
+    syncActiveConversation(state, action) {
+      state.activeConversationId = action.payload;
+      persistState(state);
     }
   },
   extraReducers: (builder) => {
     builder
-      // Fetch chats
       .addCase(fetchChats.pending, (state) => {
         state.isLoading = true;
       })
@@ -161,36 +201,41 @@ const chatSlice = createSlice({
         if (action.payload.length > 0) {
           state.activeConversationId = action.payload[0].id;
         }
+        persistState(state);
       })
       .addCase(fetchChats.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload;
       })
-      // Create chat async
       .addCase(createChatAsync.fulfilled, (state, action) => {
         state.conversations.unshift(action.payload);
         state.activeConversationId = action.payload.id;
+        persistState(state);
       })
-      // Delete chat async
       .addCase(deleteChatAsync.fulfilled, (state, action) => {
-        state.conversations = state.conversations.filter(c => c.id !== action.payload);
+        state.conversations = state.conversations.filter((conversation) => conversation.id !== action.payload);
         if (state.activeConversationId === action.payload) {
           state.activeConversationId = state.conversations[0]?.id || null;
         }
+        persistState(state);
       })
-      // Rename chat async
       .addCase(renameChatAsync.fulfilled, (state, action) => {
         const { id, title } = action.payload;
-        const chat = state.conversations.find(c => c.id === id);
-        if (chat) chat.title = title;
+        const chat = state.conversations.find((conversation) => conversation.id === id);
+        if (chat) {
+          chat.title = title;
+          persistState(state);
+        }
       })
-      // Add message async
       .addCase(addMessageAsync.fulfilled, (state, action) => {
         const { chatId, message } = action.payload;
-        const chat = state.conversations.find(c => c.id === chatId);
+        const chat = state.conversations.find((conversation) => conversation.id === chatId);
         if (chat) {
-          const exists = chat.messages.some(m => m.id === message.id);
-          if (!exists) chat.messages.push(message);
+          const exists = chat.messages.some((existingMessage) => existingMessage.id === message.id);
+          if (!exists) {
+            chat.messages.push(message);
+            persistState(state);
+          }
         }
       });
   }
@@ -208,7 +253,8 @@ export const {
   setLoading,
   addMessage,
   updateLastMessageText,
-  addSourceToLastMessage
+  addSourceToLastMessage,
+  syncActiveConversation
 } = chatSlice.actions;
 
 export default chatSlice.reducer;

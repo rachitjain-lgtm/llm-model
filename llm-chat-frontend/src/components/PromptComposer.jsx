@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { 
   Paperclip, 
@@ -20,7 +20,8 @@ import {
   setLoading, 
   updateLastMessageText, 
   addSourceToLastMessage,
-  updateChatSettings 
+  updateChatSettings,
+  renameChat
 } from "../store/chatSlice";
 import { 
   toggleRightPanel, 
@@ -30,6 +31,15 @@ import {
   setPromptLibraryModalOpen 
 } from "../store/uiSlice";
 import { chatApi } from "../api/chatApi";
+import { getModelLabel } from "../config/models";
+
+const createMessageId = (suffix) => {
+  if (globalThis.crypto?.randomUUID) {
+    return `msg-${globalThis.crypto.randomUUID()}-${suffix}`;
+  }
+
+  return `msg-${Math.random().toString(36).slice(2, 10)}-${suffix}`;
+};
 
 export default function PromptComposer() {
   const dispatch = useDispatch();
@@ -37,9 +47,12 @@ export default function PromptComposer() {
   const conversations = useSelector(state => state.chat.conversations);
   const activeChat = conversations.find(c => c.id === activeId);
   const isLoading = useSelector(state => state.chat.isLoading);
+  const streamingOn = useSelector(state => state.chat.streamingOn);
 
   const kbDropdownOpen = useSelector(state => state.ui.kbDropdownOpen);
   const activeKbId = useSelector(state => state.ui.activeKbId);
+  const apiKey = useSelector(state => state.ui.apiKey);
+  const appName = useSelector(state => state.ui.appName);
 
   const [inputText, setInputText] = useState("");
   const [kbSearch, setKbSearch] = useState("");
@@ -143,7 +156,7 @@ export default function PromptComposer() {
     }
   };
 
-  const handleSend = () => {
+  const handleSend = async () => {
     if ((!inputText.trim() && attachments.length === 0) || isLoading) return;
 
     const userMessageText = inputText.trim();
@@ -159,7 +172,7 @@ export default function PromptComposer() {
     dispatch(addMessage({
       chatId: activeChat.id,
       message: {
-        id: `msg-${Date.now()}-user`,
+        id: createMessageId("user"),
         sender: "user",
         text: userMessageText,
         time: timeStr,
@@ -168,11 +181,18 @@ export default function PromptComposer() {
       }
     }));
 
+    if (activeChat.messages.length === 0 && userMessageText) {
+      dispatch(renameChat({
+        id: activeChat.id,
+        title: userMessageText.slice(0, 48)
+      }));
+    }
+
     // 2. Set loading state
     dispatch(setLoading(true));
 
     // 3. Add blank assistant bubble to stream into
-    const assistantMsgId = `msg-${Date.now()}-assistant`;
+    const assistantMsgId = createMessageId("assistant");
     dispatch(addMessage({
       chatId: activeChat.id,
       message: {
@@ -191,31 +211,44 @@ export default function PromptComposer() {
       fullPrompt = userMessageText ? `${userMessageText}\n\n${fileListStr}` : fileListStr;
     }
 
-    // Persist user prompt to MongoDB
-    chatApi.saveMessage(activeChat.id, {
-      sender: "user",
-      content: fullPrompt
-    }).catch(err => console.error("Failed to save user message to DB:", err));
+    try {
+      chatApi.saveMessage(activeChat.id, {
+        sender: "user",
+        content: fullPrompt
+      }).catch((err) => console.error("Failed to save user message to DB:", err));
 
-    // 4. Trigger mock streaming
-    chatApi.sendMessageStream(
-      activeChat.id,
-      fullPrompt,
-      activeChat.model,
-      activeChat.useKnowledgeBase,
-      (chunk) => {
+      await chatApi.sendMessageStream({
+        conversation: activeChat,
+        prompt: fullPrompt,
+        apiKey,
+        appName,
+        streamingOn,
+        activeKb
+      }, (chunk) => {
         dispatch(updateLastMessageText({ chatId: activeChat.id, text: chunk }));
-      },
-      (finalText, sources) => {
+      }, (finalText, sources) => {
         dispatch(updateLastMessageText({ chatId: activeChat.id, text: finalText }));
+        chatApi.saveMessage(activeChat.id, {
+          sender: "assistant",
+          content: finalText
+        }).catch((err) => console.error("Failed to save assistant message to DB:", err));
         if (sources) {
           sources.forEach(src => {
             dispatch(addSourceToLastMessage({ chatId: activeChat.id, source: src }));
           });
         }
         dispatch(setLoading(false));
-      }
-    );
+      });
+    } catch (error) {
+      dispatch(updateLastMessageText({
+        chatId: activeChat.id,
+        text: `Request failed for **${getModelLabel(activeChat.model)}**.
+${error.message}
+
+If you're using a free model, double-check that the model ID is still available and that your OpenRouter API key is valid.`
+      }));
+      dispatch(setLoading(false));
+    }
   };
 
   const handleKeyDown = (e) => {
@@ -316,7 +349,7 @@ export default function PromptComposer() {
           value={inputText}
           onChange={(e) => setInputText(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder={`Message ${activeChat.model}... (Drag & drop or attach files)`}
+          placeholder={`Message ${getModelLabel(activeChat.model)}... (Drag & drop or attach files)`}
           className="w-full resize-none bg-transparent text-xs text-[#171717] dark:text-[#eceff1] placeholder-[#A3A3A3] dark:placeholder-[#64748B] focus:outline-none p-1 font-sans font-medium transition-colors"
         />
 

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { 
   Plus, 
@@ -14,10 +14,7 @@ import {
   LogOut
 } from "lucide-react";
 import { 
-  setActiveConversation, 
-  createNewChat, 
-  deleteChat, 
-  renameChat,
+  syncActiveConversation, 
   setSearchQuery,
   createChatAsync,
   deleteChatAsync,
@@ -42,7 +39,7 @@ export default function Sidebar() {
   };
 
   const handleSelectChat = (id) => {
-    dispatch(setActiveConversation(id));
+    dispatch(syncActiveConversation(id));
   };
 
   const handleDeleteChat = (e, id) => {
@@ -247,7 +244,7 @@ export default function Sidebar() {
             </div>
             <div className="min-w-0">
               <div className="text-xs font-semibold truncate">Enterprise Workspace</div>
-              <div className="text-[10px] text-[#737373] truncate">SSO • us-east-1 • 12 members</div>
+              <div className="text-[10px] text-[#737373] truncate">BYOK • OpenRouter • free models</div>
             </div>
           </div>
           <ArrowRight size={12} className="text-[#737373] rotate-270" />

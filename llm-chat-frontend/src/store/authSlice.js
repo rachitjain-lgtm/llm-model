@@ -52,7 +52,7 @@ const authSlice = createSlice({
       state.isLoading = false;
       state.error = action.payload;
     },
-    registerSuccess(state, action) {
+    registerSuccess(state) {
       state.isLoading = false;
       state.error = null;
     },
@@ -61,7 +61,7 @@ const authSlice = createSlice({
       state.recoveryEmailSent = true;
       state.error = null;
     },
-    resetPasswordSuccess(state, action) {
+    resetPasswordSuccess(state) {
       state.isLoading = false;
       state.error = null;
       state.recoveryEmailSent = false;

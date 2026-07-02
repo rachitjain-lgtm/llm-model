@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { Sparkles, Database, Shield, BookOpen } from "lucide-react";
 import MessageBubble from "./MessageBubble";
