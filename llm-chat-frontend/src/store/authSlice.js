@@ -39,11 +39,14 @@ const authSlice = createSlice({
       state.resetPasswordCompleted = false;
     },
     loginSuccess(state, action) {
+      const { user, accessToken, refreshToken } = action.payload;
       state.isLoading = false;
       state.isAuthenticated = true;
-      state.user = action.payload;
+      state.user = user || action.payload;
       state.error = null;
-      localStorage.setItem("user", JSON.stringify(action.payload));
+      if (user || action.payload) localStorage.setItem("user", JSON.stringify(user || action.payload));
+      if (accessToken) localStorage.setItem("token", accessToken);
+      if (refreshToken) localStorage.setItem("refreshToken", refreshToken);
     },
     authFailure(state, action) {
       state.isLoading = false;
@@ -51,8 +54,6 @@ const authSlice = createSlice({
     },
     registerSuccess(state, action) {
       state.isLoading = false;
-      state.usersDb.push(action.payload);
-      localStorage.setItem("users_db", JSON.stringify(state.usersDb));
       state.error = null;
     },
     recoverySuccess(state) {
@@ -61,18 +62,10 @@ const authSlice = createSlice({
       state.error = null;
     },
     resetPasswordSuccess(state, action) {
-      const { email, newPassword } = action.payload;
       state.isLoading = false;
       state.error = null;
       state.recoveryEmailSent = false;
       state.resetPasswordCompleted = true;
-      const userIndex = state.usersDb.findIndex(u => u.email.toLowerCase() === email.toLowerCase());
-      if (userIndex !== -1) {
-        state.usersDb[userIndex].password = newPassword;
-      } else {
-        state.usersDb.push({ email, password: newPassword, name: email.split("@")[0] });
-      }
-      localStorage.setItem("users_db", JSON.stringify(state.usersDb));
     },
     logout(state) {
       state.isLoading = false;
@@ -82,6 +75,8 @@ const authSlice = createSlice({
       state.recoveryEmailSent = false;
       state.resetPasswordCompleted = false;
       localStorage.removeItem("user");
+      localStorage.removeItem("token");
+      localStorage.removeItem("refreshToken");
     },
     clearError(state) {
       state.error = null;

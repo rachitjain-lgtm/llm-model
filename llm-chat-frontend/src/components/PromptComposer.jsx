@@ -26,7 +26,8 @@ import {
   toggleRightPanel, 
   setActiveKbId, 
   toggleKbDropdown, 
-  setKbDropdownOpen 
+  setKbDropdownOpen,
+  setPromptLibraryModalOpen 
 } from "../store/uiSlice";
 import { chatApi } from "../api/chatApi";
 
@@ -47,6 +48,7 @@ export default function PromptComposer() {
   
   const kbRef = useRef(null);
   const fileInputRef = useRef(null);
+  const textareaRef = useRef(null);
 
   // Close KB selector on click outside
   useEffect(() => {
@@ -58,6 +60,23 @@ export default function PromptComposer() {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [dispatch]);
+
+  // Listen for prompt library insertion events to fill input box
+  useEffect(() => {
+    const handleInsertPrompt = (e) => {
+      if (e.detail) {
+        setInputText(e.detail);
+        setTimeout(() => {
+          if (textareaRef.current) {
+            textareaRef.current.focus();
+            textareaRef.current.setSelectionRange(e.detail.length, e.detail.length);
+          }
+        }, 50);
+      }
+    };
+    window.addEventListener("insert-prompt", handleInsertPrompt);
+    return () => window.removeEventListener("insert-prompt", handleInsertPrompt);
+  }, []);
 
   if (!activeChat) return null;
 
@@ -171,6 +190,12 @@ export default function PromptComposer() {
       const fileListStr = currentAttachments.map(a => `[Attached File: ${a.name} (${a.size})]`).join("\n");
       fullPrompt = userMessageText ? `${userMessageText}\n\n${fileListStr}` : fileListStr;
     }
+
+    // Persist user prompt to MongoDB
+    chatApi.saveMessage(activeChat.id, {
+      sender: "user",
+      content: fullPrompt
+    }).catch(err => console.error("Failed to save user message to DB:", err));
 
     // 4. Trigger mock streaming
     chatApi.sendMessageStream(
@@ -286,6 +311,7 @@ export default function PromptComposer() {
 
         {/* Text Input area */}
         <textarea
+          ref={textareaRef}
           rows={2}
           value={inputText}
           onChange={(e) => setInputText(e.target.value)}
@@ -398,7 +424,10 @@ export default function PromptComposer() {
             </button>
 
             {/* Prompt Library */}
-            <button className="h-9 px-3 hover:bg-[#FAFAFA] dark:hover:bg-[#23272A] border border-transparent hover:border-[#E7E7E7] dark:border-[#23272A] rounded-xl flex items-center gap-2 text-[11px] font-semibold text-[#737373] dark:text-[#94A3B8] hover:text-[#171717] dark:hover:text-[#eceff1] transition-all cursor-pointer">
+            <button 
+              onClick={() => dispatch(setPromptLibraryModalOpen(true))}
+              className="h-9 px-3 hover:bg-[#FAFAFA] dark:hover:bg-[#23272A] border border-transparent hover:border-[#E7E7E7] dark:border-[#23272A] rounded-xl flex items-center gap-2 text-[11px] font-semibold text-[#737373] dark:text-[#94A3B8] hover:text-[#171717] dark:hover:text-[#eceff1] transition-all cursor-pointer"
+            >
               <BookOpen size={14} />
               <span>Prompt library</span>
             </button>

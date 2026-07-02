@@ -1,5 +1,43 @@
-// Mock API for chat actions with simulated streaming
+import axiosClient from "./axiosClient";
+
 export const chatApi = {
+  // Fetch user chats from MongoDB
+  fetchUserChats: async () => {
+    const res = await axiosClient.get("/chats");
+    return res.data.data;
+  },
+
+  // Create a new chat in MongoDB
+  createChat: async (chatData) => {
+    const res = await axiosClient.post("/chats", chatData);
+    return res.data.data;
+  },
+
+  // Rename chat in MongoDB
+  renameChat: async (chatId, title) => {
+    const res = await axiosClient.put(`/chats/${chatId}/title`, { title });
+    return res.data.data;
+  },
+
+  // Update chat settings in MongoDB
+  updateSettings: async (chatId, settings) => {
+    const res = await axiosClient.put(`/chats/${chatId}/settings`, settings);
+    return res.data.data;
+  },
+
+  // Delete chat from MongoDB
+  deleteChat: async (chatId) => {
+    const res = await axiosClient.delete(`/chats/${chatId}`);
+    return res.data;
+  },
+
+  // Save message to MongoDB
+  saveMessage: async (chatId, messageData) => {
+    const res = await axiosClient.post(`/chats/${chatId}/messages`, messageData);
+    return res.data.data;
+  },
+
+  // Simulated streaming helper for prompt responses, saving final response to MongoDB
   sendMessageStream: (chatId, text, model, useKnowledgeBase, onChunk, onDone) => {
     let responseText = "";
     let sources = null;
@@ -83,7 +121,6 @@ Let me know if you would like me to compile code, perform a semantic search in y
       }
     }
 
-    // Split text into tokens / words to simulate streaming
     const words = responseText.split(/(\s+)/);
     let index = 0;
     let currentString = "";
@@ -95,8 +132,15 @@ Let me know if you would like me to compile code, perform a semantic search in y
         index++;
       } else {
         clearInterval(interval);
+        // Persist final assistant response to MongoDB backend
+        chatApi.saveMessage(chatId, {
+          sender: "assistant",
+          content: currentString,
+          tokens: words.length
+        }).catch(err => console.error("Failed to save assistant message to DB:", err));
+
         onDone(currentString, sources);
       }
-    }, 15); // Fast streaming simulation
+    }, 15);
   }
 };

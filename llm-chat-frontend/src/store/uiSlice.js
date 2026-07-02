@@ -8,7 +8,8 @@ const initialState = {
   kbDropdownOpen: false,
   activeKbId: "kb-3e7f2a1", // Default is Product Docs KB
   theme: typeof window !== "undefined" ? (localStorage.getItem("theme") || "light") : "light",
-  settingsModalOpen: false
+  settingsModalOpen: false,
+  promptLibraryModalOpen: false
 };
 
 const uiSlice = createSlice({
@@ -62,6 +63,12 @@ const uiSlice = createSlice({
     },
     setSettingsModalOpen(state, action) {
       state.settingsModalOpen = action.payload;
+    },
+    togglePromptLibraryModal(state) {
+      state.promptLibraryModalOpen = !state.promptLibraryModalOpen;
+    },
+    setPromptLibraryModalOpen(state, action) {
+      state.promptLibraryModalOpen = action.payload;
     }
   }
 });
@@ -81,7 +88,9 @@ export const {
   toggleTheme,
   setTheme,
   toggleSettingsModal,
-  setSettingsModalOpen
+  setSettingsModalOpen,
+  togglePromptLibraryModal,
+  setPromptLibraryModalOpen
 } = uiSlice.actions;
 
 export default uiSlice.reducer;

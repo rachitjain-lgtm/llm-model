@@ -23,6 +23,7 @@ import {
   resetPasswordSuccess,
   clearError 
 } from "../store/authSlice";
+import axiosClient from "../api/axiosClient";
 
 export default function Login() {
   const dispatch = useDispatch();
@@ -74,7 +75,7 @@ export default function Login() {
           isGoogle: true,
           sub: decoded.sub
         };
-        dispatch(loginSuccess(userObj));
+        dispatch(loginSuccess({ user: userObj, accessToken: credentialResponse.credential }));
       }
     } catch (err) {
       console.error("Google auth decode error:", err);
@@ -170,54 +171,50 @@ export default function Login() {
     return valid;
   };
 
-  const handleLoginSubmit = (e) => {
+  const handleLoginSubmit = async (e) => {
     e.preventDefault();
     if (!validateLogin()) return;
 
     dispatch(authStart());
-
-    setTimeout(() => {
-      // Find matching user from local database
-      const matched = usersDb.find(u => u.email.toLowerCase() === email.trim().toLowerCase());
-      
-      if (matched && matched.password === password) {
-        dispatch(loginSuccess({
-          email: matched.email,
-          name: matched.name,
-          avatar: ""
-        }));
+    try {
+      const response = await axiosClient.post("/auth/login", {
+        email: email.trim(),
+        password: password,
+      });
+      if (response.data && response.data.success) {
+        const { user, accessToken, refreshToken } = response.data.data;
+        dispatch(loginSuccess({ user, accessToken, refreshToken }));
       } else {
-        dispatch(authFailure("Invalid email or password."));
+        dispatch(authFailure(response.data.message || "Login failed."));
       }
-    }, 1000);
+    } catch (err) {
+      const msg = err.response?.data?.message || err.message || "Failed to connect to backend server.";
+      dispatch(authFailure(msg));
+    }
   };
 
-  const handleSignupSubmit = (e) => {
+  const handleSignupSubmit = async (e) => {
     e.preventDefault();
     if (!validateSignup()) return;
 
     dispatch(authStart());
-
-    setTimeout(() => {
-      const exists = usersDb.some(u => u.email.toLowerCase() === email.trim().toLowerCase());
-      
-      if (exists) {
-        dispatch(authFailure("This email is already registered."));
+    try {
+      const response = await axiosClient.post("/auth/register", {
+        name: name.trim(),
+        email: email.trim(),
+        password: password,
+      });
+      if (response.data && response.data.success) {
+        const { user, accessToken, refreshToken } = response.data.data;
+        dispatch(registerSuccess());
+        dispatch(loginSuccess({ user, accessToken, refreshToken }));
       } else {
-        const newUser = {
-          email: email.trim(),
-          password: password,
-          name: name.trim()
-        };
-        dispatch(registerSuccess(newUser));
-        // Auto login on successful signup
-        dispatch(loginSuccess({
-          email: newUser.email,
-          name: newUser.name,
-          avatar: ""
-        }));
+        dispatch(authFailure(response.data.message || "Registration failed."));
       }
-    }, 1000);
+    } catch (err) {
+      const msg = err.response?.data?.message || err.message || "Failed to register account.";
+      dispatch(authFailure(msg));
+    }
   };
 
   const handleForgotSubmit = (e) => {

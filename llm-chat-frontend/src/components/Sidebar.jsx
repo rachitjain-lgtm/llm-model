@@ -18,7 +18,10 @@ import {
   createNewChat, 
   deleteChat, 
   renameChat,
-  setSearchQuery 
+  setSearchQuery,
+  createChatAsync,
+  deleteChatAsync,
+  renameChatAsync
 } from "../store/chatSlice";
 import { toggleSidebar, setSettingsModalOpen } from "../store/uiSlice";
 import { logout } from "../store/authSlice";
@@ -35,7 +38,7 @@ export default function Sidebar() {
   const [editTitle, setEditTitle] = useState("");
 
   const handleCreateChat = () => {
-    dispatch(createNewChat());
+    dispatch(createChatAsync({ title: "New Conversation" }));
   };
 
   const handleSelectChat = (id) => {
@@ -44,7 +47,7 @@ export default function Sidebar() {
 
   const handleDeleteChat = (e, id) => {
     e.stopPropagation();
-    dispatch(deleteChat(id));
+    dispatch(deleteChatAsync(id));
   };
 
   const startRename = (e, id, title) => {
@@ -56,7 +59,7 @@ export default function Sidebar() {
   const saveRename = (e, id) => {
     e.stopPropagation();
     if (editTitle.trim()) {
-      dispatch(renameChat({ id, title: editTitle.trim() }));
+      dispatch(renameChatAsync({ id, title: editTitle.trim() }));
     }
     setEditingId(null);
   };
