@@ -8,7 +8,12 @@ import {
   Send, 
   SlidersHorizontal,
   Check,
-  Search
+  Search,
+  X,
+  FileText,
+  Image as ImageIcon,
+  FileCode,
+  File
 } from "lucide-react";
 import { 
   addMessage, 
@@ -37,7 +42,11 @@ export default function PromptComposer() {
 
   const [inputText, setInputText] = useState("");
   const [kbSearch, setKbSearch] = useState("");
+  const [attachments, setAttachments] = useState([]);
+  const [isDragging, setIsDragging] = useState(false);
+  
   const kbRef = useRef(null);
+  const fileInputRef = useRef(null);
 
   // Close KB selector on click outside
   useEffect(() => {
@@ -52,16 +61,82 @@ export default function PromptComposer() {
 
   if (!activeChat) return null;
 
+  // Helper to format bytes
+  const formatFileSize = (bytes) => {
+    if (bytes === 0) return "0 B";
+    const k = 1024;
+    const sizes = ["B", "KB", "MB", "GB"];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + " " + sizes[i];
+  };
+
+  // Process files selected via file input or drop
+  const handleAddFiles = (files) => {
+    const newAttachments = Array.from(files).map((file) => {
+      const isImage = file.type.startsWith("image/");
+      return {
+        id: `att-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+        name: file.name,
+        size: formatFileSize(file.size),
+        type: file.type,
+        isImage,
+        previewUrl: isImage ? URL.createObjectURL(file) : null
+      };
+    });
+    setAttachments(prev => [...prev, ...newAttachments]);
+  };
+
+  const handleFileChange = (e) => {
+    if (e.target.files && e.target.files.length > 0) {
+      handleAddFiles(e.target.files);
+      e.target.value = ""; // reset input
+    }
+  };
+
+  const removeAttachment = (id) => {
+    setAttachments(prev => {
+      const itemToRemove = prev.find(a => a.id === id);
+      if (itemToRemove && itemToRemove.previewUrl) {
+        URL.revokeObjectURL(itemToRemove.previewUrl);
+      }
+      return prev.filter(a => a.id !== id);
+    });
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      handleAddFiles(e.dataTransfer.files);
+    }
+  };
+
   const handleSend = () => {
-    if (!inputText.trim() || isLoading) return;
+    if ((!inputText.trim() && attachments.length === 0) || isLoading) return;
 
     const userMessageText = inputText.trim();
+    const currentAttachments = [...attachments];
+
     setInputText("");
+    setAttachments([]);
 
     const now = new Date();
     const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-    // 1. Add User Message
+    // 1. Add User Message (with attachments if any)
     dispatch(addMessage({
       chatId: activeChat.id,
       message: {
@@ -69,7 +144,8 @@ export default function PromptComposer() {
         sender: "user",
         text: userMessageText,
         time: timeStr,
-        initials: "AR"
+        initials: "AR",
+        attachments: currentAttachments
       }
     }));
 
@@ -89,18 +165,23 @@ export default function PromptComposer() {
       }
     }));
 
+    // Construct prompt sent to API including attachment names
+    let fullPrompt = userMessageText;
+    if (currentAttachments.length > 0) {
+      const fileListStr = currentAttachments.map(a => `[Attached File: ${a.name} (${a.size})]`).join("\n");
+      fullPrompt = userMessageText ? `${userMessageText}\n\n${fileListStr}` : fileListStr;
+    }
+
     // 4. Trigger mock streaming
     chatApi.sendMessageStream(
       activeChat.id,
-      userMessageText,
+      fullPrompt,
       activeChat.model,
       activeChat.useKnowledgeBase,
       (chunk) => {
-        // Stream text chunk
         dispatch(updateLastMessageText({ chatId: activeChat.id, text: chunk }));
       },
       (finalText, sources) => {
-        // Stream done
         dispatch(updateLastMessageText({ chatId: activeChat.id, text: finalText }));
         if (sources) {
           sources.forEach(src => {
@@ -132,19 +213,84 @@ export default function PromptComposer() {
     k.title.toLowerCase().includes(kbSearch.toLowerCase())
   );
 
+  const renderFileIcon = (att) => {
+    if (att.isImage) return <ImageIcon size={14} className="text-emerald-600 dark:text-emerald-400" />;
+    if (att.name.endsWith(".json") || att.name.endsWith(".js") || att.name.endsWith(".py") || att.name.endsWith(".html") || att.name.endsWith(".css")) {
+      return <FileCode size={14} className="text-blue-500 dark:text-blue-400" />;
+    }
+    if (att.name.endsWith(".pdf") || att.name.endsWith(".txt") || att.name.endsWith(".md") || att.name.endsWith(".doc")) {
+      return <FileText size={14} className="text-amber-500 dark:text-amber-400" />;
+    }
+    return <File size={14} className="text-teal-600 dark:text-teal-400" />;
+  };
+
   return (
     <div className="p-4 md:p-6 border-t border-[#E7E7E7] dark:border-[#23272A] bg-white dark:bg-[#16191B] flex flex-col flex-shrink-0 select-none transition-colors duration-200">
       
+      {/* Hidden File Input */}
+      <input 
+        type="file" 
+        ref={fileInputRef} 
+        onChange={handleFileChange} 
+        multiple 
+        className="hidden" 
+      />
+
       {/* Compose Area Container */}
-      <div className="relative border border-[#E7E7E7] dark:border-[#23272A] rounded-2xl bg-white dark:bg-[#1E2326] shadow-sm flex flex-col p-3 transition-colors duration-200">
+      <div 
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+        className={`relative border rounded-2xl bg-white dark:bg-[#1E2326] shadow-sm flex flex-col p-3 transition-all duration-200
+          ${isDragging 
+            ? "border-[#245955] dark:border-[#347d78] ring-2 ring-[#245955]/20 dark:ring-[#347d78]/20 bg-[#E7F3F1]/30 dark:bg-[#183331]/30" 
+            : "border-[#E7E7E7] dark:border-[#23272A]"}`}
+      >
         
+        {/* Attachment Chips Preview Container */}
+        {attachments.length > 0 && (
+          <div className="flex items-center gap-2 overflow-x-auto pb-2 mb-2 border-b border-[#F0F0F0] dark:border-[#282d31]">
+            {attachments.map((att) => (
+              <div 
+                key={att.id} 
+                className="flex items-center gap-2 bg-[#F5F7F7] dark:bg-[#0f1214] border border-[#E7E7E7] dark:border-[#282d31] px-2.5 py-1.5 rounded-xl text-xs text-[#171717] dark:text-[#eceff1] flex-shrink-0 group transition-colors"
+              >
+                {att.isImage && att.previewUrl ? (
+                  <img 
+                    src={att.previewUrl} 
+                    alt={att.name} 
+                    className="w-7 h-7 object-cover rounded-md border border-black/10 dark:border-white/10" 
+                  />
+                ) : (
+                  <div className="w-7 h-7 rounded-md bg-white dark:bg-[#1A1D20] border border-[#E7E7E7] dark:border-[#23272A] flex items-center justify-center">
+                    {renderFileIcon(att)}
+                  </div>
+                )}
+                
+                <div className="flex flex-col min-w-0 max-w-[140px]">
+                  <span className="truncate text-[11px] font-semibold">{att.name}</span>
+                  <span className="text-[9px] text-[#737373] dark:text-[#94A3B8]">{att.size}</span>
+                </div>
+
+                <button 
+                  onClick={() => removeAttachment(att.id)}
+                  className="p-1 rounded-full hover:bg-slate-200 dark:hover:bg-[#282d31] text-[#737373] hover:text-rose-500 dark:hover:text-rose-400 transition-all cursor-pointer"
+                  title="Remove attachment"
+                >
+                  <X size={12} />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
         {/* Text Input area */}
         <textarea
           rows={2}
           value={inputText}
           onChange={(e) => setInputText(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder={`Message ${activeChat.model}...`}
+          placeholder={`Message ${activeChat.model}... (Drag & drop or attach files)`}
           className="w-full resize-none bg-transparent text-xs text-[#171717] dark:text-[#eceff1] placeholder-[#A3A3A3] dark:placeholder-[#64748B] focus:outline-none p-1 font-sans font-medium transition-colors"
         />
 
@@ -154,10 +300,19 @@ export default function PromptComposer() {
           {/* Quick Buttons Left */}
           <div className="flex items-center gap-1.5 flex-wrap">
             
-            {/* Attachment */}
-            <button className="h-9 px-3 hover:bg-[#FAFAFA] dark:hover:bg-[#23272A] border border-transparent hover:border-[#E7E7E7] dark:hover:border-[#23272A] rounded-xl flex items-center gap-2 text-[11px] font-semibold text-[#737373] dark:text-[#94A3B8] hover:text-[#171717] dark:hover:text-[#eceff1] transition-all cursor-pointer">
+            {/* Attachment Button */}
+            <button 
+              onClick={() => fileInputRef.current?.click()}
+              className="h-9 px-3 hover:bg-[#FAFAFA] dark:hover:bg-[#23272A] border border-transparent hover:border-[#E7E7E7] dark:hover:border-[#23272A] rounded-xl flex items-center gap-2 text-[11px] font-semibold text-[#737373] dark:text-[#94A3B8] hover:text-[#171717] dark:hover:text-[#eceff1] transition-all cursor-pointer relative"
+              title="Attach files or images"
+            >
               <Paperclip size={14} />
               <span>Attach</span>
+              {attachments.length > 0 && (
+                <span className="w-4 h-4 rounded-full bg-[#245955] dark:bg-[#347d78] text-white text-[9px] font-bold flex items-center justify-center">
+                  {attachments.length}
+                </span>
+              )}
             </button>
 
             {/* Knowledge Base selector trigger */}
@@ -264,13 +419,13 @@ export default function PromptComposer() {
             {/* Send circle */}
             <button 
               onClick={handleSend}
-              disabled={!inputText.trim() || isLoading}
+              disabled={(!inputText.trim() && attachments.length === 0) || isLoading}
               className={`w-9 h-9 rounded-full flex items-center justify-center text-white transition-all cursor-pointer shadow-sm
-                ${inputText.trim() && !isLoading 
+                ${(inputText.trim() || attachments.length > 0) && !isLoading 
                   ? "bg-[#245955] dark:bg-[#347d78] hover:bg-[#1d4643] dark:hover:bg-[#2b6763]" 
                   : "bg-slate-200 dark:bg-zinc-800 cursor-not-allowed text-slate-400 dark:text-zinc-600"}`}
             >
-              <Send size={14} className={inputText.trim() ? "translate-x-0.5 -translate-y-0.5 rotate-45" : ""} />
+              <Send size={14} className={(inputText.trim() || attachments.length > 0) ? "translate-x-0.5 -translate-y-0.5 rotate-45" : ""} />
             </button>
           </div>
 
@@ -284,4 +439,5 @@ export default function PromptComposer() {
     </div>
   );
 }
+
 

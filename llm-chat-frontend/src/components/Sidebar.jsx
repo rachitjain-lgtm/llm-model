@@ -214,9 +214,13 @@ export default function Sidebar() {
         {user && (
           <div className="flex items-center justify-between p-2.5 rounded-lg bg-[#1a1a1a]/40 border border-[#262626] mb-1">
             <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-8 h-8 rounded-lg bg-[#245955] flex items-center justify-center font-bold text-xs text-white uppercase select-none">
-                {user.name.substring(0, 2)}
-              </div>
+              {user.picture ? (
+                <img src={user.picture} alt={user.name} className="w-8 h-8 rounded-lg object-cover border border-[#262626]" />
+              ) : (
+                <div className="w-8 h-8 rounded-lg bg-[#245955] flex items-center justify-center font-bold text-xs text-white uppercase select-none">
+                  {user.name.substring(0, 2)}
+                </div>
+              )}
               <div className="min-w-0">
                 <div className="text-xs font-semibold truncate text-white">{user.name}</div>
                 <div className="text-[10px] text-[#737373] truncate">{user.email}</div>

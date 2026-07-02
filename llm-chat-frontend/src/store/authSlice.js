@@ -24,7 +24,8 @@ const initialState = {
   usersDb: getStoredUsersDb(),
   isLoading: false,
   error: null,
-  recoveryEmailSent: false
+  recoveryEmailSent: false,
+  resetPasswordCompleted: false
 };
 
 const authSlice = createSlice({
@@ -35,6 +36,7 @@ const authSlice = createSlice({
       state.isLoading = true;
       state.error = null;
       state.recoveryEmailSent = false;
+      state.resetPasswordCompleted = false;
     },
     loginSuccess(state, action) {
       state.isLoading = false;
@@ -58,17 +60,33 @@ const authSlice = createSlice({
       state.recoveryEmailSent = true;
       state.error = null;
     },
+    resetPasswordSuccess(state, action) {
+      const { email, newPassword } = action.payload;
+      state.isLoading = false;
+      state.error = null;
+      state.recoveryEmailSent = false;
+      state.resetPasswordCompleted = true;
+      const userIndex = state.usersDb.findIndex(u => u.email.toLowerCase() === email.toLowerCase());
+      if (userIndex !== -1) {
+        state.usersDb[userIndex].password = newPassword;
+      } else {
+        state.usersDb.push({ email, password: newPassword, name: email.split("@")[0] });
+      }
+      localStorage.setItem("users_db", JSON.stringify(state.usersDb));
+    },
     logout(state) {
       state.isLoading = false;
       state.isAuthenticated = false;
       state.user = null;
       state.error = null;
       state.recoveryEmailSent = false;
+      state.resetPasswordCompleted = false;
       localStorage.removeItem("user");
     },
     clearError(state) {
       state.error = null;
       state.recoveryEmailSent = false;
+      state.resetPasswordCompleted = false;
     }
   }
 });
@@ -79,6 +97,7 @@ export const {
   authFailure,
   registerSuccess,
   recoverySuccess,
+  resetPasswordSuccess,
   logout,
   clearError
 } = authSlice.actions;

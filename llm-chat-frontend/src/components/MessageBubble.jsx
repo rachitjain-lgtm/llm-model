@@ -5,11 +5,16 @@ import {
   Copy, 
   Check, 
   ExternalLink,
-  Info
+  Info,
+  Paperclip,
+  FileText,
+  Image as ImageIcon,
+  FileCode,
+  File
 } from "lucide-react";
 
 export default function MessageBubble({ message }) {
-  const { sender, text, time, initials, sources } = message;
+  const { sender, text, time, initials, sources, attachments } = message;
   const [copied, setCopied] = useState(false);
   const [voted, setVoted] = useState(null); // 'up' or 'down'
 
@@ -17,6 +22,17 @@ export default function MessageBubble({ message }) {
     navigator.clipboard.writeText(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const renderFileIcon = (att) => {
+    if (att.isImage) return <ImageIcon size={14} className="text-emerald-600 dark:text-emerald-400" />;
+    if (att.name?.endsWith(".json") || att.name?.endsWith(".js") || att.name?.endsWith(".py") || att.name?.endsWith(".html") || att.name?.endsWith(".css")) {
+      return <FileCode size={14} className="text-blue-500 dark:text-blue-400" />;
+    }
+    if (att.name?.endsWith(".pdf") || att.name?.endsWith(".txt") || att.name?.endsWith(".md") || att.name?.endsWith(".doc")) {
+      return <FileText size={14} className="text-amber-500 dark:text-amber-400" />;
+    }
+    return <File size={14} className="text-teal-600 dark:text-teal-400" />;
   };
 
   // Helper for inline styles (bold, links)
@@ -175,6 +191,29 @@ export default function MessageBubble({ message }) {
             ? "bg-[#FAFAFA] dark:bg-[#1E2326] text-[#171717] dark:text-[#eceff1] rounded-tr-none border border-[#E7E7E7] dark:border-[#23272A]" 
             : "bg-white dark:bg-[#16191B] text-[#171717] dark:text-[#eceff1] rounded-tl-none border border-[#E7E7E7] dark:border-[#23272A]"
         }`}>
+          {/* Render Attached Files if any */}
+          {attachments && attachments.length > 0 && (
+            <div className="mb-3 flex flex-wrap gap-2">
+              {attachments.map((att, i) => (
+                <div key={i} className="flex items-center gap-2 bg-white dark:bg-[#141719] border border-[#E7E7E7] dark:border-[#282d31] p-2 rounded-xl text-xs shadow-sm">
+                  {att.isImage && att.previewUrl ? (
+                    <img src={att.previewUrl} alt={att.name} className="max-h-32 object-cover rounded-lg border border-black/10" />
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-md bg-[#F5F7F7] dark:bg-[#1A1D20] flex items-center justify-center">
+                        {renderFileIcon(att)}
+                      </div>
+                      <div className="flex flex-col pr-1">
+                        <span className="font-semibold text-[11px] text-[#171717] dark:text-[#eceff1]">{att.name}</span>
+                        <span className="text-[9px] text-[#737373] dark:text-[#94A3B8]">{att.size}</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
           {renderContent(text)}
 
           {/* Sources section */}

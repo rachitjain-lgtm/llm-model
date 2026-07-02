@@ -29,10 +29,10 @@ function App() {
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-[#F5F7F7] dark:bg-[#0f1214] text-[#171717] dark:text-[#eceff1] transition-colors duration-200">
-      
+
       {/* Sidebar Overlay for mobile views */}
       {sidebarOpen && (
-        <div 
+        <div
           onClick={() => dispatch(setSidebarOpen(false))}
           className="fixed inset-0 bg-black/45 z-30 md:hidden cursor-pointer backdrop-blur-[1px] transition-opacity"
         />
@@ -44,10 +44,10 @@ function App() {
       {/* Central Chat area */}
       <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden relative">
         <Topbar />
-        
+
         {/* Scrollable messages container */}
         <ChatWindow />
-        
+
         {/* Bottom Prompter */}
         <PromptComposer />
       </div>
