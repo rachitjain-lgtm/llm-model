@@ -4,7 +4,6 @@ import {
   Menu, 
   ChevronDown, 
   Share2, 
-  Sliders, 
   Check, 
   Edit3,
   Sun,
@@ -12,17 +11,13 @@ import {
 } from "lucide-react";
 import { 
   toggleSidebar, 
-  toggleRightPanel, 
   toggleModelDropdown, 
   setModelDropdownOpen, 
-  toggleRegionDropdown, 
-  setRegionDropdownOpen,
   toggleTheme
 } from "../store/uiSlice";
 import { 
   updateChatSettings, 
-  renameChat, 
-  toggleStreaming 
+  renameChat
 } from "../store/chatSlice";
 
 export default function Topbar() {
@@ -30,26 +25,20 @@ export default function Topbar() {
   const activeId = useSelector(state => state.chat.activeConversationId);
   const conversations = useSelector(state => state.chat.conversations);
   const activeChat = conversations.find(c => c.id === activeId);
-  const streamingOn = useSelector(state => state.chat.streamingOn);
   
   const modelDropdownOpen = useSelector(state => state.ui.modelDropdownOpen);
-  const regionDropdownOpen = useSelector(state => state.ui.regionDropdownOpen);
   const theme = useSelector(state => state.ui.theme);
 
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [titleInput, setTitleInput] = useState("");
 
   const modelRef = useRef(null);
-  const regionRef = useRef(null);
 
   // Close dropdowns on click outside
   useEffect(() => {
     function handleClickOutside(event) {
       if (modelRef.current && !modelRef.current.contains(event.target)) {
         dispatch(setModelDropdownOpen(false));
-      }
-      if (regionRef.current && !regionRef.current.contains(event.target)) {
-        dispatch(setRegionDropdownOpen(false));
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
@@ -88,13 +77,6 @@ export default function Topbar() {
     "Claude 3 Haiku",
     "Llama 3 70B",
     "Titan Text G1 - Premier"
-  ];
-
-  const regions = [
-    "us-east-1",
-    "us-west-2",
-    "eu-west-1",
-    "ap-northeast-1"
   ];
 
   return (
@@ -139,7 +121,7 @@ export default function Topbar() {
         </div>
       </div>
 
-      {/* Right: Model + Region + Streaming + Theme Toggle + Share + Toggle Controls */}
+      {/* Right: Model + Theme Toggle + Share + Toggle Controls */}
       <div className="flex items-center gap-2 md:gap-4 flex-shrink-0">
         
         {/* Model Dropdown */}
@@ -178,46 +160,6 @@ export default function Topbar() {
           )}
         </div>
 
-        {/* Region Dropdown */}
-        <div className="relative hidden sm:block" ref={regionRef}>
-          <button 
-            onClick={() => dispatch(toggleRegionDropdown())}
-            className="h-10 px-3.5 border border-[#E7E7E7] dark:border-[#23272A] hover:border-[#cbd5e1] dark:hover:border-zinc-700 rounded-lg bg-white dark:bg-[#16191B] flex items-center gap-2 text-xs font-semibold text-[#171717] dark:text-[#ECEFF1] shadow-sm transition-colors cursor-pointer"
-          >
-            <span>{activeChat.region}</span>
-            <ChevronDown size={14} className={`text-[#737373] dark:text-[#94A3B8] transition-transform duration-200 ${regionDropdownOpen ? 'rotate-180' : ''}`} />
-          </button>
-
-          {regionDropdownOpen && (
-            <div className="absolute right-0 mt-1.5 w-44 bg-white dark:bg-[#1E2326] border border-[#E7E7E7] dark:border-[#23272A] rounded-lg shadow-lg py-1.5 z-50 transition-colors">
-              {regions.map((r) => (
-                <button
-                  key={r}
-                  onClick={() => {
-                    dispatch(updateChatSettings({ id: activeChat.id, key: "region", value: r }));
-                    dispatch(setRegionDropdownOpen(false));
-                  }}
-                  className="w-full px-4 py-2 text-xs text-left hover:bg-[#FAFAFA] dark:hover:bg-[#23272A] flex items-center justify-between cursor-pointer"
-                >
-                  <span className={activeChat.region === r ? "font-semibold text-[#245955] dark:text-[#347d78]" : "text-[#737373] dark:text-[#94A3B8]"}>
-                    {r}
-                  </span>
-                  {activeChat.region === r && <Check size={14} className="text-[#245955] dark:text-[#347d78]" />}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Streaming toggler */}
-        <button 
-          onClick={() => dispatch(toggleStreaming())}
-          className="h-10 px-3 border border-[#E7E7E7] dark:border-[#23272A] rounded-lg bg-white dark:bg-[#16191B] flex items-center gap-2 text-xs font-semibold text-[#737373] dark:text-[#94A3B8] shadow-sm cursor-pointer hover:bg-slate-50 dark:hover:bg-[#23272A] transition-colors"
-        >
-          <div className={`w-2 h-2 rounded-full ${streamingOn ? 'bg-emerald-500 pulse-green' : 'bg-slate-300 dark:bg-zinc-600'}`} />
-          <span className="hidden md:inline">Streaming {streamingOn ? "on" : "off"}</span>
-        </button>
-
         {/* Theme toggler */}
         <button 
           onClick={() => dispatch(toggleTheme())}
@@ -233,15 +175,6 @@ export default function Topbar() {
           title="Share / Export"
         >
           <Share2 size={16} />
-        </button>
-
-        {/* Settings Toggle right panel */}
-        <button 
-          onClick={() => dispatch(toggleRightPanel())}
-          className="p-2.5 border border-[#E7E7E7] dark:border-[#23272A] bg-white dark:bg-[#16191B] hover:bg-slate-50 dark:hover:bg-[#23272A] text-[#737373] dark:text-[#94A3B8] hover:text-[#171717] dark:hover:text-[#ECEFF1] rounded-lg shadow-sm cursor-pointer transition-colors"
-          title="Run Controls"
-        >
-          <Sliders size={16} />
         </button>
 
       </div>

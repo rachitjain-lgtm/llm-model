@@ -2,13 +2,12 @@ import { createSlice } from "@reduxjs/toolkit";
 
 const initialState = {
   sidebarOpen: true,
-  rightPanelOpen: true,
   modelDropdownOpen: false,
-  regionDropdownOpen: false,
   kbDropdownOpen: false,
   activeKbId: "kb-3e7f2a1", // Default is Product Docs KB
   theme: typeof window !== "undefined" ? (localStorage.getItem("theme") || "light") : "light",
-  settingsModalOpen: false
+  settingsModalOpen: false,
+  promptLibraryModalOpen: false
 };
 
 const uiSlice = createSlice({
@@ -21,23 +20,11 @@ const uiSlice = createSlice({
     setSidebarOpen(state, action) {
       state.sidebarOpen = action.payload;
     },
-    toggleRightPanel(state) {
-      state.rightPanelOpen = !state.rightPanelOpen;
-    },
-    setRightPanelOpen(state, action) {
-      state.rightPanelOpen = action.payload;
-    },
     toggleModelDropdown(state) {
       state.modelDropdownOpen = !state.modelDropdownOpen;
     },
     setModelDropdownOpen(state, action) {
       state.modelDropdownOpen = action.payload;
-    },
-    toggleRegionDropdown(state) {
-      state.regionDropdownOpen = !state.regionDropdownOpen;
-    },
-    setRegionDropdownOpen(state, action) {
-      state.regionDropdownOpen = action.payload;
     },
     toggleKbDropdown(state) {
       state.kbDropdownOpen = !state.kbDropdownOpen;
@@ -62,6 +49,12 @@ const uiSlice = createSlice({
     },
     setSettingsModalOpen(state, action) {
       state.settingsModalOpen = action.payload;
+    },
+    togglePromptLibraryModal(state) {
+      state.promptLibraryModalOpen = !state.promptLibraryModalOpen;
+    },
+    setPromptLibraryModalOpen(state, action) {
+      state.promptLibraryModalOpen = action.payload;
     }
   }
 });
@@ -69,19 +62,17 @@ const uiSlice = createSlice({
 export const {
   toggleSidebar,
   setSidebarOpen,
-  toggleRightPanel,
-  setRightPanelOpen,
   toggleModelDropdown,
   setModelDropdownOpen,
-  toggleRegionDropdown,
-  setRegionDropdownOpen,
   toggleKbDropdown,
   setKbDropdownOpen,
   setActiveKbId,
   toggleTheme,
   setTheme,
   toggleSettingsModal,
-  setSettingsModalOpen
+  setSettingsModalOpen,
+  togglePromptLibraryModal,
+  setPromptLibraryModalOpen
 } = uiSlice.actions;
 
 export default uiSlice.reducer;

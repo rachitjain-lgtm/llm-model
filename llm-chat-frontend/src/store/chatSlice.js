@@ -173,18 +173,69 @@ HAVING total_spent > 100;
   }
 ];
 
+const getUserConversations = (email) => {
+  if (typeof window === "undefined" || !email) return [];
+  const key = `conversations_${email.toLowerCase()}`;
+  const stored = localStorage.getItem(key);
+  if (stored) {
+    try {
+      return JSON.parse(stored);
+    } catch (e) {
+      console.error("Error parsing user conversations:", e);
+    }
+  }
+  // Sample mock conversations shown ONLY for demo@gmail.com
+  if (email.toLowerCase() === "demo@gmail.com") {
+    localStorage.setItem(key, JSON.stringify(mockConversations));
+    return mockConversations;
+  }
+  // For all actual logged-in users, start with empty list []
+  localStorage.setItem(key, JSON.stringify([]));
+  return [];
+};
+
+const saveUserConversations = (email, conversations) => {
+  if (typeof window !== "undefined" && email) {
+    const key = `conversations_${email.toLowerCase()}`;
+    localStorage.setItem(key, JSON.stringify(conversations));
+  }
+};
+
+const getInitialUserEmail = () => {
+  if (typeof window !== "undefined") {
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) {
+      try {
+        const parsed = JSON.parse(storedUser);
+        return parsed?.email || null;
+      } catch (e) {}
+    }
+  }
+  return null;
+};
+
+const initialEmail = getInitialUserEmail();
+const initialConversations = getUserConversations(initialEmail);
+
 const initialState = {
-  conversations: mockConversations,
-  activeConversationId: "chat-1",
+  conversations: initialConversations,
+  activeConversationId: initialConversations.length > 0 ? initialConversations[0].id : null,
   searchQuery: "",
-  streamingOn: true,
-  isLoading: false
+  isLoading: false,
+  currentUserEmail: initialEmail
 };
 
 const chatSlice = createSlice({
   name: "chat",
   initialState,
   reducers: {
+    loadUserConversations(state, action) {
+      const email = action.payload;
+      state.currentUserEmail = email;
+      const userConvs = getUserConversations(email);
+      state.conversations = userConvs;
+      state.activeConversationId = userConvs.length > 0 ? userConvs[0].id : null;
+    },
     setActiveConversation(state, action) {
       state.activeConversationId = action.payload;
     },
@@ -192,11 +243,10 @@ const chatSlice = createSlice({
       const id = `chat-${Date.now()}`;
       const newChat = {
         id,
-        title: "New chat",
+        title: "New Conversation",
         timestamp: "Today, " + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         model: "Claude 3 Sonnet",
         provider: "Cloud AI",
-        region: "us-east-1",
         temperature: 0.7,
         maxTokens: 4096,
         useKnowledgeBase: false,
@@ -205,18 +255,21 @@ const chatSlice = createSlice({
       };
       state.conversations.unshift(newChat);
       state.activeConversationId = id;
+      saveUserConversations(state.currentUserEmail, state.conversations);
     },
     deleteChat(state, action) {
       state.conversations = state.conversations.filter(c => c.id !== action.payload);
       if (state.activeConversationId === action.payload) {
         state.activeConversationId = state.conversations[0]?.id || null;
       }
+      saveUserConversations(state.currentUserEmail, state.conversations);
     },
     renameChat(state, action) {
       const { id, title } = action.payload;
       const chat = state.conversations.find(c => c.id === id);
       if (chat) {
         chat.title = title;
+        saveUserConversations(state.currentUserEmail, state.conversations);
       }
     },
     updateChatSettings(state, action) {
@@ -224,13 +277,11 @@ const chatSlice = createSlice({
       const chat = state.conversations.find(c => c.id === id);
       if (chat) {
         chat[key] = value;
+        saveUserConversations(state.currentUserEmail, state.conversations);
       }
     },
     setSearchQuery(state, action) {
       state.searchQuery = action.payload;
-    },
-    toggleStreaming(state) {
-      state.streamingOn = !state.streamingOn;
     },
     setLoading(state, action) {
       state.isLoading = action.payload;
@@ -240,6 +291,7 @@ const chatSlice = createSlice({
       const chat = state.conversations.find(c => c.id === chatId);
       if (chat) {
         chat.messages.push(message);
+        saveUserConversations(state.currentUserEmail, state.conversations);
       }
     },
     updateLastMessageText(state, action) {
@@ -249,6 +301,7 @@ const chatSlice = createSlice({
         const lastMsg = chat.messages[chat.messages.length - 1];
         if (lastMsg.sender === "assistant") {
           lastMsg.text = text;
+          saveUserConversations(state.currentUserEmail, state.conversations);
         }
       }
     },
@@ -260,6 +313,7 @@ const chatSlice = createSlice({
         if (lastMsg.sender === "assistant") {
           if (!lastMsg.sources) lastMsg.sources = [];
           lastMsg.sources.push(source);
+          saveUserConversations(state.currentUserEmail, state.conversations);
         }
       }
     }
@@ -267,13 +321,13 @@ const chatSlice = createSlice({
 });
 
 export const {
+  loadUserConversations,
   setActiveConversation,
   createNewChat,
   deleteChat,
   renameChat,
   updateChatSettings,
   setSearchQuery,
-  toggleStreaming,
   setLoading,
   addMessage,
   updateLastMessageText,

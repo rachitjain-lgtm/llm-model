@@ -3,7 +3,7 @@ import { useSelector, useDispatch } from "react-redux";
 import { Sparkles, Database, Shield, BookOpen } from "lucide-react";
 import MessageBubble from "./MessageBubble";
 import { updateChatSettings } from "../store/chatSlice";
-import { toggleKbDropdown } from "../store/uiSlice";
+import { toggleKbDropdown, togglePromptLibraryModal } from "../store/uiSlice";
 
 export default function ChatWindow() {
   const dispatch = useDispatch();
@@ -92,6 +92,7 @@ export default function ChatWindow() {
 
             {/* Prompt Library */}
             <button 
+              onClick={() => dispatch(togglePromptLibraryModal())}
               className="w-full flex items-center justify-between p-4 bg-white dark:bg-[#16191B] border border-[#E7E7E7] dark:border-[#23272A] hover:border-[#245955] dark:hover:border-[#347d78] rounded-xl hover:shadow-sm transition-all text-left cursor-pointer group"
             >
               <div className="flex items-center gap-3.5">

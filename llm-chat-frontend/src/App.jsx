@@ -4,16 +4,24 @@ import Sidebar from "./components/Sidebar";
 import Topbar from "./components/Topbar";
 import ChatWindow from "./components/ChatWindow";
 import PromptComposer from "./components/PromptComposer";
-import RightPanel from "./components/RightPanel";
 import SettingsModal from "./components/SettingsModal";
+import PromptLibraryModal from "./components/PromptLibraryModal";
 import Login from "./components/Login";
 import { setSidebarOpen } from "./store/uiSlice";
+import { loadUserConversations } from "./store/chatSlice";
 
 function App() {
   const dispatch = useDispatch();
   const sidebarOpen = useSelector((state) => state.ui.sidebarOpen);
   const theme = useSelector((state) => state.ui.theme);
   const isAuthenticated = useSelector((state) => state.auth.isAuthenticated);
+  const user = useSelector((state) => state.auth.user);
+
+  useEffect(() => {
+    if (user && user.email) {
+      dispatch(loadUserConversations(user.email));
+    }
+  }, [user, dispatch]);
 
   useEffect(() => {
     if (theme === "dark") {
@@ -52,11 +60,11 @@ function App() {
         <PromptComposer />
       </div>
 
-      {/* Right Control Settings Panel */}
-      <RightPanel />
-
       {/* Global Settings Modal */}
       <SettingsModal />
+
+      {/* Prompt Library Modal */}
+      <PromptLibraryModal />
 
     </div>
   );

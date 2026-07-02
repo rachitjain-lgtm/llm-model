@@ -9,13 +9,30 @@ const getStoredUser = () => {
 };
 
 const getStoredUsersDb = () => {
+  const defaultUsers = [
+    { email: "demo@gmail.com", password: "Aashi1710", name: "Demo User" }
+  ];
   if (typeof window !== "undefined") {
-    const db = localStorage.getItem("users_db");
-    return db ? JSON.parse(db) : [
-      { email: "demo@bedrock.com", password: "password123", name: "Demo User" }
-    ];
+    const dbStr = localStorage.getItem("users_db");
+    if (dbStr) {
+      try {
+        const db = JSON.parse(dbStr);
+        const demoIdx = db.findIndex(u => u.email.toLowerCase() === "demo@gmail.com");
+        if (demoIdx !== -1) {
+          db[demoIdx].password = "Aashi1710";
+        } else {
+          db.push({ email: "demo@gmail.com", password: "Aashi1710", name: "Demo User" });
+        }
+        localStorage.setItem("users_db", JSON.stringify(db));
+        return db;
+      } catch (e) {
+        // Fallback to default
+      }
+    }
+    localStorage.setItem("users_db", JSON.stringify(defaultUsers));
+    return defaultUsers;
   }
-  return [];
+  return defaultUsers;
 };
 
 const initialState = {

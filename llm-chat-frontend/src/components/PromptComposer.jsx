@@ -6,7 +6,6 @@ import {
   Shield, 
   BookOpen, 
   Send, 
-  SlidersHorizontal,
   Check,
   Search,
   X,
@@ -23,10 +22,10 @@ import {
   updateChatSettings 
 } from "../store/chatSlice";
 import { 
-  toggleRightPanel, 
   setActiveKbId, 
   toggleKbDropdown, 
-  setKbDropdownOpen 
+  setKbDropdownOpen,
+  togglePromptLibraryModal
 } from "../store/uiSlice";
 import { chatApi } from "../api/chatApi";
 
@@ -398,7 +397,10 @@ export default function PromptComposer() {
             </button>
 
             {/* Prompt Library */}
-            <button className="h-9 px-3 hover:bg-[#FAFAFA] dark:hover:bg-[#23272A] border border-transparent hover:border-[#E7E7E7] dark:border-[#23272A] rounded-xl flex items-center gap-2 text-[11px] font-semibold text-[#737373] dark:text-[#94A3B8] hover:text-[#171717] dark:hover:text-[#eceff1] transition-all cursor-pointer">
+            <button 
+              onClick={() => dispatch(togglePromptLibraryModal())}
+              className="h-9 px-3 hover:bg-[#FAFAFA] dark:hover:bg-[#23272A] border border-transparent hover:border-[#E7E7E7] dark:border-[#23272A] rounded-xl flex items-center gap-2 text-[11px] font-semibold text-[#737373] dark:text-[#94A3B8] hover:text-[#171717] dark:hover:text-[#eceff1] transition-all cursor-pointer"
+            >
               <BookOpen size={14} />
               <span>Prompt library</span>
             </button>
@@ -407,15 +409,6 @@ export default function PromptComposer() {
           {/* Right Tools Controls + Send */}
           <div className="flex items-center gap-2">
             
-            {/* Tune setting toggle */}
-            <button 
-              onClick={() => dispatch(toggleRightPanel())}
-              className="p-2 hover:bg-[#FAFAFA] dark:hover:bg-[#23272A] text-[#737373] dark:text-[#94A3B8] hover:text-[#171717] dark:hover:text-[#eceff1] rounded-xl transition-all cursor-pointer"
-              title="Tune Configuration"
-            >
-              <SlidersHorizontal size={14} />
-            </button>
-
             {/* Send circle */}
             <button 
               onClick={handleSend}

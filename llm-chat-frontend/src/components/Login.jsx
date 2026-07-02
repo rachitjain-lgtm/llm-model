@@ -414,6 +414,11 @@ export default function Login() {
                 Sign Up
               </button>
             </div>
+
+            {/* Demo Credentials Helper */}
+            <div className="mt-3 p-2.5 rounded-xl bg-[#E7F3F1] border border-[#245955]/20 text-center text-[10px] text-[#245955] font-semibold">
+              Demo Account: <span className="font-bold select-all">demo@gmail.com</span> | Password: <span className="font-bold select-all">Aashi1710</span>
+            </div>
           </form>
         )}
 
