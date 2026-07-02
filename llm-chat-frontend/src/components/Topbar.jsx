@@ -27,6 +27,7 @@ export default function Topbar() {
   const activeChat = conversations.find(c => c.id === activeId);
   
   const modelDropdownOpen = useSelector(state => state.ui.modelDropdownOpen);
+  const sidebarOpen = useSelector(state => state.ui.sidebarOpen);
   const theme = useSelector(state => state.ui.theme);
 
   const [isEditingTitle, setIsEditingTitle] = useState(false);
@@ -56,7 +57,8 @@ export default function Topbar() {
       <div className="h-16 border-b border-[#E7E7E7] dark:border-[#23272A] bg-white dark:bg-[#16191B] flex items-center px-6 transition-colors duration-200">
         <button 
           onClick={() => dispatch(toggleSidebar())} 
-          className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-[#23272A] mr-2 text-[#737373] dark:text-[#94A3B8] md:hidden cursor-pointer"
+          className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-[#23272A] mr-2 text-[#737373] dark:text-[#94A3B8] cursor-pointer"
+          title={sidebarOpen ? "Hide left panel" : "Show left panel"}
         >
           <Menu size={20} />
         </button>
@@ -86,6 +88,7 @@ export default function Topbar() {
         <button 
           onClick={() => dispatch(toggleSidebar())} 
           className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-[#23272A] text-[#737373] dark:text-[#94A3B8] cursor-pointer transition-colors"
+          title={sidebarOpen ? "Hide left panel" : "Show left panel"}
         >
           <Menu size={20} />
         </button>
