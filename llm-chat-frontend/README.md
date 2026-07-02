@@ -1,16 +1,23 @@
-# React + Vite
+# AI Studio Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+## API key setup
 
-Currently, two official plugins are available:
+1. Copy `.env.example` to `.env.local`.
+2. Add your OpenRouter key to `VITE_OPENROUTER_API_KEY`.
+3. Keep `VITE_GOOGLE_CLIENT_ID` only if you want Google sign-in enabled.
+4. Start the app with `npm run dev`.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+Example:
 
-## React Compiler
+```env
+VITE_GOOGLE_CLIENT_ID="your-google-client-id.apps.googleusercontent.com"
+VITE_OPENROUTER_API_KEY="sk-or-v1-..."
+VITE_APP_NAME="AI Studio"
+VITE_OPENROUTER_API_URL="https://openrouter.ai/api/v1/chat/completions"
+```
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Notes
 
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+- `.env.local` is ignored by git, so use it for real secrets.
+- The frontend can also accept the OpenRouter key from the Settings modal.
+- For production, move model requests behind a backend proxy instead of exposing provider keys in the browser.
