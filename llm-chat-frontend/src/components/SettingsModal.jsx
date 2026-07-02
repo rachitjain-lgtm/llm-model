@@ -1,14 +1,34 @@
-import React from "react";
+import React, { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { X, Sun, Moon, Laptop, ShieldCheck, Cpu } from "lucide-react";
+import { X, Sun, Moon, Laptop, ShieldCheck, Cpu, Trash2, CheckCircle2 } from "lucide-react";
 import { setSettingsModalOpen, setTheme } from "../store/uiSlice";
+import { clearActiveChat } from "../store/chatSlice";
 
 export default function SettingsModal() {
   const dispatch = useDispatch();
   const settingsModalOpen = useSelector((state) => state.ui.settingsModalOpen);
   const theme = useSelector((state) => state.ui.theme);
+  const activeId = useSelector((state) => state.chat.activeConversationId);
+  const conversations = useSelector((state) => state.chat.conversations);
+  const activeChat = conversations.find((c) => c.id === activeId);
+
+  const [confirmClear, setConfirmClear] = useState(false);
+  const [clearedSuccess, setClearedSuccess] = useState(false);
 
   if (!settingsModalOpen) return null;
+
+  const handleClearChat = () => {
+    if (!confirmClear) {
+      setConfirmClear(true);
+      return;
+    }
+    dispatch(clearActiveChat());
+    setConfirmClear(false);
+    setClearedSuccess(true);
+    setTimeout(() => setClearedSuccess(false), 2500);
+  };
+
+  const hasMessages = activeChat && activeChat.messages && activeChat.messages.length > 0;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -65,6 +85,53 @@ export default function SettingsModal() {
               >
                 <Moon size={14} />
                 Dark Mode
+              </button>
+            </div>
+          </div>
+
+          {/* Opened Conversation Management */}
+          <div className="space-y-3">
+            <label className="text-[11px] font-semibold text-[#737373] dark:text-[#94A3B8] uppercase tracking-wider block">
+              Active Conversation
+            </label>
+            <div className="p-4 bg-[#FAFAFA] dark:bg-[#1E2326] border border-[#E7E7E7] dark:border-[#23272A] rounded-xl flex items-center justify-between transition-colors">
+              <div className="flex flex-col">
+                <span className="text-xs font-semibold text-[#171717] dark:text-[#eceff1] truncate max-w-[200px]">
+                  {activeChat ? activeChat.title : "No conversation selected"}
+                </span>
+                <span className="text-[10px] text-[#737373] dark:text-[#94A3B8]">
+                  {hasMessages ? `${activeChat.messages.length} message(s) in thread` : "No messages in active chat"}
+                </span>
+              </div>
+              <button
+                disabled={!hasMessages}
+                onClick={handleClearChat}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold cursor-pointer transition-all ${
+                  clearedSuccess
+                    ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30"
+                    : confirmClear
+                    ? "bg-rose-600 text-white hover:bg-rose-700 animate-pulse"
+                    : hasMessages
+                    ? "bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/20"
+                    : "opacity-50 cursor-not-allowed bg-slate-100 dark:bg-[#262B2E] text-[#94A3B8]"
+                }`}
+              >
+                {clearedSuccess ? (
+                  <>
+                    <CheckCircle2 size={13} />
+                    Cleared!
+                  </>
+                ) : confirmClear ? (
+                  <>
+                    <Trash2 size={13} />
+                    Confirm Clear?
+                  </>
+                ) : (
+                  <>
+                    <Trash2 size={13} />
+                    Clear Opened Chat
+                  </>
+                )}
               </button>
             </div>
           </div>

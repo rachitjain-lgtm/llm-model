@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import { 
   ThumbsUp, 
   ThumbsDown, 
@@ -10,18 +11,103 @@ import {
   FileText,
   Image as ImageIcon,
   FileCode,
-  File
+  File,
+  Edit2,
+  X as XIcon
 } from "lucide-react";
+import { editMessage, setLoading, addMessage } from "../store/chatSlice";
+import { chatApi } from "../api/chatApi";
 
 export default function MessageBubble({ message }) {
-  const { sender, text, time, initials, sources, attachments } = message;
+  const dispatch = useDispatch();
+  const activeId = useSelector((state) => state.chat.activeConversationId);
+  const conversations = useSelector((state) => state.chat.conversations);
+  const activeChat = conversations.find((c) => c.id === activeId);
+
+  const { id, sender, text, time, initials, sources, attachments } = message;
   const [copied, setCopied] = useState(false);
   const [voted, setVoted] = useState(null); // 'up' or 'down'
+
+  const [isEditing, setIsEditing] = useState(false);
+  const [editText, setEditText] = useState(text);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleSaveEdit = () => {
+    const trimmedText = editText.trim();
+    if (!trimmedText) return;
+
+    setIsEditing(false);
+
+    if (trimmedText !== text) {
+      // 1. Update the user message
+      dispatch(editMessage({ chatId: activeId, messageId: id, newText: trimmedText }));
+
+      // 2. Find and update/regenerate the corresponding assistant response
+      if (activeChat && activeChat.messages) {
+        const msgIndex = activeChat.messages.findIndex((m) => m.id === id);
+        const nextMsg = activeChat.messages[msgIndex + 1];
+
+        if (nextMsg && nextMsg.sender === "assistant") {
+          // Update existing assistant response stream
+          dispatch(setLoading(true));
+          chatApi.sendMessageStream(
+            activeId,
+            trimmedText,
+            activeChat.model || "Claude 3 Sonnet",
+            activeChat.useKnowledgeBase,
+            (chunk) => {
+              dispatch(editMessage({ chatId: activeId, messageId: nextMsg.id, newText: chunk }));
+            },
+            (finalText) => {
+              dispatch(editMessage({ chatId: activeId, messageId: nextMsg.id, newText: finalText }));
+              dispatch(setLoading(false));
+            }
+          );
+        } else {
+          // If no assistant message follows, create new assistant response & stream
+          const assistantMsgId = `msg-${Date.now()}-assistant`;
+          const timeStr = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+
+          dispatch(
+            addMessage({
+              chatId: activeId,
+              message: {
+                id: assistantMsgId,
+                sender: "assistant",
+                text: "",
+                time: timeStr,
+                sources: null
+              }
+            })
+          );
+
+          dispatch(setLoading(true));
+          chatApi.sendMessageStream(
+            activeId,
+            trimmedText,
+            activeChat.model || "Claude 3 Sonnet",
+            activeChat.useKnowledgeBase,
+            (chunk) => {
+              dispatch(editMessage({ chatId: activeId, messageId: assistantMsgId, newText: chunk }));
+            },
+            (finalText) => {
+              dispatch(editMessage({ chatId: activeId, messageId: assistantMsgId, newText: finalText }));
+              dispatch(setLoading(false));
+            }
+          );
+        }
+      }
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditText(text);
+    setIsEditing(false);
   };
 
   const renderFileIcon = (att) => {
@@ -185,8 +271,8 @@ export default function MessageBubble({ message }) {
       {/* Message Bubble Column */}
       <div className={`flex flex-col max-w-[80%] ${isUser ? "items-end" : "items-start"}`}>
         
-        {/* Main Text Content */}
-        <div className={`px-5 py-4 rounded-2xl shadow-sm transition-colors duration-200 ${
+        {/* Main Text Content / Edit Mode */}
+        <div className={`px-5 py-4 rounded-2xl shadow-sm transition-colors duration-200 min-w-[240px] ${
           isUser 
             ? "bg-[#FAFAFA] dark:bg-[#1E2326] text-[#171717] dark:text-[#eceff1] rounded-tr-none border border-[#E7E7E7] dark:border-[#23272A]" 
             : "bg-white dark:bg-[#16191B] text-[#171717] dark:text-[#eceff1] rounded-tl-none border border-[#E7E7E7] dark:border-[#23272A]"
@@ -214,7 +300,42 @@ export default function MessageBubble({ message }) {
             </div>
           )}
 
-          {renderContent(text)}
+          {isEditing ? (
+            <div className="space-y-3 w-full">
+              <textarea
+                value={editText}
+                onChange={(e) => setEditText(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+                    handleSaveEdit();
+                  }
+                  if (e.key === "Escape") {
+                    handleCancelEdit();
+                  }
+                }}
+                className="w-full min-h-[80px] p-3 bg-white dark:bg-[#16191B] border border-[#245955] dark:border-[#347d78] rounded-xl text-xs text-[#171717] dark:text-[#eceff1] focus:outline-none resize-y"
+                autoFocus
+              />
+              <div className="flex items-center justify-end gap-2">
+                <button
+                  onClick={handleCancelEdit}
+                  className="px-3 py-1.5 rounded-lg text-xs font-semibold text-[#737373] dark:text-[#94A3B8] hover:bg-slate-200 dark:hover:bg-[#262B2E] transition-colors cursor-pointer flex items-center gap-1"
+                >
+                  <XIcon size={12} />
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSaveEdit}
+                  className="px-3.5 py-1.5 bg-[#245955] dark:bg-[#347d78] hover:bg-[#1d4643] text-white rounded-lg text-xs font-semibold shadow-sm transition-colors cursor-pointer flex items-center gap-1"
+                >
+                  <Check size={12} />
+                  Save
+                </button>
+              </div>
+            </div>
+          ) : (
+            renderContent(text)
+          )}
 
           {/* Sources section */}
           {sources && sources.length > 0 && (
@@ -242,8 +363,24 @@ export default function MessageBubble({ message }) {
         </div>
 
         {/* Action icons / timestamp row */}
-        <div className="flex items-center gap-4 mt-2 px-1 text-[10px] text-[#A3A3A3] dark:text-[#64748B] select-none">
+        <div className="flex items-center gap-3 mt-2 px-1 text-[10px] text-[#A3A3A3] dark:text-[#64748B] select-none">
           <span>{time}</span>
+
+          {/* Edit button ONLY for User input messages */}
+          {isUser && !isEditing && (
+            <button
+              onClick={() => {
+                setEditText(text);
+                setIsEditing(true);
+              }}
+              className="p-1 rounded hover:bg-slate-200 dark:hover:bg-[#23272A] hover:text-[#171717] dark:hover:text-[#eceff1] transition-all cursor-pointer text-[#737373] dark:text-[#94A3B8] flex items-center gap-1"
+              title="Edit prompt"
+            >
+              <Edit2 size={12} />
+              <span>Edit</span>
+            </button>
+          )}
+
           {!isUser && (
             <div className="flex items-center gap-2">
               <button 

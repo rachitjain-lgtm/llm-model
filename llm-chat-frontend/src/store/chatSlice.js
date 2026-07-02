@@ -316,6 +316,25 @@ const chatSlice = createSlice({
           saveUserConversations(state.currentUserEmail, state.conversations);
         }
       }
+    },
+    clearActiveChat(state) {
+      if (!state.activeConversationId) return;
+      const chat = state.conversations.find(c => c.id === state.activeConversationId);
+      if (chat) {
+        chat.messages = [];
+        saveUserConversations(state.currentUserEmail, state.conversations);
+      }
+    },
+    editMessage(state, action) {
+      const { chatId, messageId, newText } = action.payload;
+      const chat = state.conversations.find(c => c.id === (chatId || state.activeConversationId));
+      if (chat) {
+        const msg = chat.messages.find(m => m.id === messageId);
+        if (msg) {
+          msg.text = newText;
+          saveUserConversations(state.currentUserEmail, state.conversations);
+        }
+      }
     }
   }
 });
@@ -331,7 +350,9 @@ export const {
   setLoading,
   addMessage,
   updateLastMessageText,
-  addSourceToLastMessage
+  addSourceToLastMessage,
+  clearActiveChat,
+  editMessage
 } = chatSlice.actions;
 
 export default chatSlice.reducer;
