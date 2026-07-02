@@ -1,31 +1,5 @@
 import axiosClient from "./axiosClient";
 
-const FALLBACK_API_URL = "https://openrouter.ai/api/v1/chat/completions";
-
-const extractTextContent = (content) => {
-  if (typeof content === "string") {
-    return content;
-  }
-
-  if (Array.isArray(content)) {
-    return content
-      .map((item) => {
-        if (typeof item === "string") {
-          return item;
-        }
-
-        if (item?.type === "text") {
-          return item.text;
-        }
-
-        return "";
-      })
-      .join("");
-  }
-
-  return "";
-};
-
 const streamText = (text, streamingOn, onChunk, onDone) => {
   if (!streamingOn) {
     onChunk(text);
@@ -84,54 +58,21 @@ export const chatApi = {
   sendMessageStream: async ({
     conversation,
     prompt,
-    apiKey,
-    appName,
     streamingOn,
     activeKb
   }, onChunk, onDone) => {
-    const sources = conversation.useKnowledgeBase && activeKb
-      ? [{ title: activeKb.title, url: "#" }]
-      : null;
-
-    if (!apiKey) {
-      const helperText = `Add an OpenRouter API key in Settings to start calling free models.
-
-This frontend is wired for real requests now, but it needs a user-supplied key before it can send prompts. Your key is stored locally in this browser only.`;
-
-      streamText(helperText, streamingOn, onChunk, (finalText) => onDone(finalText, sources));
-      return;
-    }
-
-    const systemPrompt = `You are AI Studio, a concise and helpful assistant.
-${conversation.useGuardrails ? "Avoid unsafe or disallowed content and explain refusals briefly." : ""}
-${conversation.useKnowledgeBase && activeKb ? `If the user asks about internal docs, note that the selected knowledge base is "${activeKb.title}". The frontend has not uploaded documents automatically, so only use knowledge the user actually provides in the prompt.` : ""}`;
-
-    const response = await fetch(FALLBACK_API_URL, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-        "HTTP-Referer": window.location.origin,
-        "X-Title": appName || "AI Studio"
-      },
-      body: JSON.stringify({
-        model: conversation.model,
-        temperature: conversation.temperature,
-        max_tokens: conversation.maxTokens,
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: prompt }
-        ]
-      })
+    const response = await axiosClient.post(`/chats/${conversation.id}/generate`, {
+      prompt,
+      model: conversation.model,
+      temperature: conversation.temperature,
+      maxTokens: conversation.maxTokens,
+      useGuardrails: conversation.useGuardrails,
+      useKnowledgeBase: conversation.useKnowledgeBase,
+      activeKbTitle: activeKb?.title || ""
     });
 
-    const payload = await response.json();
-
-    if (!response.ok) {
-      throw new Error(payload?.error?.message || "The model provider returned an error.");
-    }
-
-    const finalText = extractTextContent(payload?.choices?.[0]?.message?.content) || "The model returned an empty response.";
+    const finalText = response.data?.data?.text || "The model returned an empty response.";
+    const sources = response.data?.data?.sources || null;
     streamText(finalText, streamingOn, onChunk, (streamedText) => onDone(streamedText, sources));
   }
 };

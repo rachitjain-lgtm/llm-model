@@ -1,13 +1,11 @@
 import { useDispatch, useSelector } from "react-redux";
 import { X, Sun, Moon, ShieldCheck, Cpu } from "lucide-react";
-import { setApiKey, setAppName, setSettingsModalOpen, setTheme } from "../store/uiSlice";
+import { setSettingsModalOpen, setTheme } from "../store/uiSlice";
 
 export default function SettingsModal() {
   const dispatch = useDispatch();
   const settingsModalOpen = useSelector((state) => state.ui.settingsModalOpen);
   const theme = useSelector((state) => state.ui.theme);
-  const apiKey = useSelector((state) => state.ui.apiKey);
-  const appName = useSelector((state) => state.ui.appName);
   const providerName = useSelector((state) => state.ui.providerName);
 
   if (!settingsModalOpen) return null;
@@ -79,35 +77,9 @@ export default function SettingsModal() {
                   className="w-full h-10 px-3.5 bg-white dark:bg-[#16191B] border border-[#E7E7E7] dark:border-[#23272A] rounded-lg text-xs text-[#737373] dark:text-[#94A3B8] font-semibold"
                 />
               </div>
-
-              <div className="space-y-1.5">
-                <label className="text-[11px] font-semibold text-[#171717] dark:text-[#eceff1] block">
-                  API Key
-                </label>
-                <input
-                  type="password"
-                  value={apiKey}
-                  onChange={(event) => dispatch(setApiKey(event.target.value))}
-                  placeholder="Paste your OpenRouter key"
-                  className="w-full h-10 px-3.5 bg-white dark:bg-[#16191B] border border-[#E7E7E7] dark:border-[#23272A] rounded-lg text-xs text-[#171717] dark:text-[#eceff1] font-semibold focus:outline-none focus:border-[#245955] dark:focus:border-[#347d78]"
-                />
-                <p className="text-[10px] text-[#737373] dark:text-[#94A3B8] leading-normal">
-                  Stored locally in this browser. For production, move provider calls to a backend so keys are not exposed to the client.
-                </p>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-[11px] font-semibold text-[#171717] dark:text-[#eceff1] block">
-                  App Name
-                </label>
-                <input
-                  type="text"
-                  value={appName}
-                  onChange={(event) => dispatch(setAppName(event.target.value))}
-                  placeholder="AI Studio"
-                  className="w-full h-10 px-3.5 bg-white dark:bg-[#16191B] border border-[#E7E7E7] dark:border-[#23272A] rounded-lg text-xs text-[#171717] dark:text-[#eceff1] font-semibold focus:outline-none focus:border-[#245955] dark:focus:border-[#347d78]"
-                />
-              </div>
+              <p className="text-[10px] text-[#737373] dark:text-[#94A3B8] leading-normal">
+                Model requests are now routed through the backend. Configure `OPENROUTER_API_KEY` in `backend/.env` instead of storing secrets in the browser.
+              </p>
             </div>
           </div>
 
@@ -130,9 +102,9 @@ export default function SettingsModal() {
                   <ShieldCheck size={14} />
                   <span>API Key Status</span>
                 </div>
-                <span className={`flex items-center gap-1.5 text-xs font-semibold ${apiKey ? "text-[#245955] dark:text-[#347d78]" : "text-[#737373] dark:text-[#94A3B8]"}`}>
-                  <span className={`w-1.5 h-1.5 rounded-full ${apiKey ? "bg-[#245955] dark:bg-[#347d78] animate-pulse" : "bg-[#A3A3A3] dark:bg-[#64748B]"}`} />
-                  {apiKey ? "Configured" : "Missing"}
+                <span className="flex items-center gap-1.5 text-xs font-semibold text-[#245955] dark:text-[#347d78]">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#245955] dark:bg-[#347d78] animate-pulse" />
+                  Backend-managed
                 </span>
               </div>
             </div>

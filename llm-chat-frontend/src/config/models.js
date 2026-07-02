@@ -1,22 +1,27 @@
 export const MODEL_OPTIONS = [
   {
-    id: "meta-llama/llama-3.3-8b-instruct:free",
-    label: "Llama 3.3 8B Free",
+    id: "google/gemini-2.5-flash",
+    label: "Gemini 2.5 Flash",
     provider: "OpenRouter"
   },
   {
-    id: "google/gemma-3-12b-it:free",
-    label: "Gemma 3 12B Free",
+    id: "x-ai/grok-4.3",
+    label: "Grok 4.3",
     provider: "OpenRouter"
   },
   {
-    id: "mistralai/mistral-small-3.2-24b-instruct:free",
-    label: "Mistral Small 3.2 Free",
+    id: "google/gemma-3-12b-it",
+    label: "Gemma 3 12B",
     provider: "OpenRouter"
   },
   {
-    id: "qwen/qwen3-coder:free",
-    label: "Qwen 3 Coder Free",
+    id: "mistralai/mistral-small-3.2-24b-instruct",
+    label: "Mistral Small 3.2 24B",
+    provider: "OpenRouter"
+  },
+  {
+    id: "qwen/qwen3-coder",
+    label: "Qwen 3 Coder",
     provider: "OpenRouter"
   }
 ];

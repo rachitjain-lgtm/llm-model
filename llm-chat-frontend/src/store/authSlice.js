@@ -8,6 +8,23 @@ const getStoredUser = () => {
   return null;
 };
 
+const getStoredToken = () => {
+  if (typeof window !== "undefined") {
+    return localStorage.getItem("token");
+  }
+  return null;
+};
+
+const clearStoredSession = () => {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  localStorage.removeItem("user");
+  localStorage.removeItem("token");
+  localStorage.removeItem("refreshToken");
+};
+
 const getStoredUsersDb = () => {
   if (typeof window !== "undefined") {
     const db = localStorage.getItem("users_db");
@@ -19,8 +36,8 @@ const getStoredUsersDb = () => {
 };
 
 const initialState = {
-  isAuthenticated: !!getStoredUser(),
-  user: getStoredUser(),
+  isAuthenticated: !!getStoredUser() && !!getStoredToken(),
+  user: getStoredToken() ? getStoredUser() : null,
   usersDb: getStoredUsersDb(),
   isLoading: false,
   error: null,
@@ -41,7 +58,7 @@ const authSlice = createSlice({
     loginSuccess(state, action) {
       const { user, accessToken, refreshToken } = action.payload;
       state.isLoading = false;
-      state.isAuthenticated = true;
+      state.isAuthenticated = !!accessToken;
       state.user = user || action.payload;
       state.error = null;
       if (user || action.payload) localStorage.setItem("user", JSON.stringify(user || action.payload));
@@ -74,9 +91,7 @@ const authSlice = createSlice({
       state.error = null;
       state.recoveryEmailSent = false;
       state.resetPasswordCompleted = false;
-      localStorage.removeItem("user");
-      localStorage.removeItem("token");
-      localStorage.removeItem("refreshToken");
+      clearStoredSession();
     },
     clearError(state) {
       state.error = null;
@@ -96,5 +111,9 @@ export const {
   logout,
   clearError
 } = authSlice.actions;
+
+if (typeof window !== "undefined" && getStoredUser() && !getStoredToken()) {
+  clearStoredSession();
+}
 
 export default authSlice.reducer;

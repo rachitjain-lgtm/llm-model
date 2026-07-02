@@ -1,5 +1,6 @@
 const { ObjectId } = require('mongodb');
 const { getDb } = require('../config/database');
+const llmService = require('./llm.service');
 
 const sampleConversations = [
   {
@@ -232,6 +233,32 @@ const addMessageToChat = async (chatId, userId, { sender, content, tokens }) => 
   };
 };
 
+const generateChatResponse = async (chatId, userId, payload) => {
+  const db = getDb();
+  const chat = await db.collection('chats').findOne({ _id: new ObjectId(chatId), userId: new ObjectId(userId) });
+
+  if (!chat) {
+    throw new Error('Chat not found or unauthorized');
+  }
+
+  const response = await llmService.generateResponse({
+    model: payload.model || chat.model || 'google/gemini-2.5-flash',
+    prompt: payload.prompt,
+    temperature: payload.temperature ?? chat.settings?.temperature ?? 0.7,
+    maxTokens: payload.maxTokens ?? chat.settings?.maxTokens ?? 4096,
+    useGuardrails: payload.useGuardrails ?? chat.settings?.useGuardrails ?? true,
+    useKnowledgeBase: payload.useKnowledgeBase ?? chat.settings?.useKnowledgeBase ?? false,
+    activeKbTitle: payload.activeKbTitle || ''
+  });
+
+  return {
+    text: response.text,
+    sources: payload.useKnowledgeBase && payload.activeKbTitle
+      ? [{ title: payload.activeKbTitle, url: "#" }]
+      : null
+  };
+};
+
 module.exports = {
   getUserChats,
   getChatById,
@@ -240,4 +267,5 @@ module.exports = {
   updateChatSettings,
   deleteChat,
   addMessageToChat,
+  generateChatResponse,
 };

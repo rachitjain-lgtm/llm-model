@@ -51,8 +51,6 @@ export default function PromptComposer() {
 
   const kbDropdownOpen = useSelector(state => state.ui.kbDropdownOpen);
   const activeKbId = useSelector(state => state.ui.activeKbId);
-  const apiKey = useSelector(state => state.ui.apiKey);
-  const appName = useSelector(state => state.ui.appName);
 
   const [inputText, setInputText] = useState("");
   const [kbSearch, setKbSearch] = useState("");
@@ -220,8 +218,6 @@ export default function PromptComposer() {
       await chatApi.sendMessageStream({
         conversation: activeChat,
         prompt: fullPrompt,
-        apiKey,
-        appName,
         streamingOn,
         activeKb
       }, (chunk) => {

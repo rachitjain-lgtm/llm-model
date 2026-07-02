@@ -12,11 +12,9 @@ import {
   CheckCircle2, 
   KeyRound 
 } from "lucide-react";
-import { GoogleLogin } from "@react-oauth/google";
-import { jwtDecode } from "jwt-decode";
 import { 
   authStart, 
-  loginSuccess, 
+  loginSuccess,
   authFailure, 
   registerSuccess, 
   recoverySuccess, 
@@ -46,8 +44,7 @@ const getResetContext = () => {
 export default function Login() {
   const dispatch = useDispatch();
   const { isLoading, error, recoveryEmailSent } = useSelector((state) => state.auth);
-  const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-  const googleAuthEnabled = !!googleClientId && !googleClientId.includes("YOUR_GOOGLE_CLIENT_ID");
+  const googleAuthEnabled = false;
   const { initialEmail, initialView } = getResetContext();
 
   // View state: 'login' | 'signup' | 'forgot' | 'reset-password'
@@ -70,30 +67,6 @@ export default function Login() {
   const [passwordError, setPasswordError] = useState("");
   const [nameError, setNameError] = useState("");
   const [confirmPasswordError, setConfirmPasswordError] = useState("");
-
-  const handleGoogleSuccess = (credentialResponse) => {
-    try {
-      dispatch(authStart());
-      if (credentialResponse.credential) {
-        const decoded = jwtDecode(credentialResponse.credential);
-        const userObj = {
-          email: decoded.email,
-          name: decoded.name || decoded.given_name || "Google User",
-          picture: decoded.picture,
-          isGoogle: true,
-          sub: decoded.sub
-        };
-        dispatch(loginSuccess({ user: userObj, accessToken: credentialResponse.credential }));
-      }
-    } catch (err) {
-      console.error("Google auth decode error:", err);
-      dispatch(authFailure("Google Sign-In failed to process credentials."));
-    }
-  };
-
-  const handleGoogleError = () => {
-    dispatch(authFailure("Google Sign-In was cancelled or encountered an error."));
-  };
 
   const switchView = (nextView) => {
     dispatch(clearError());
@@ -398,18 +371,10 @@ export default function Login() {
 
               <div className="flex justify-center w-full min-h-[40px]">
                 {googleAuthEnabled ? (
-                  <GoogleLogin
-                    onSuccess={handleGoogleSuccess}
-                    onError={handleGoogleError}
-                    theme="outline"
-                    shape="pill"
-                    size="medium"
-                    width="320"
-                    text="signin_with"
-                  />
+                  <div />
                 ) : (
                   <div className="text-[10px] text-[#737373] text-center leading-normal">
-                    Google sign-in is hidden until `VITE_GOOGLE_CLIENT_ID` is configured.
+                    Google sign-in is disabled until backend OAuth support is added.
                   </div>
                 )}
               </div>
@@ -565,18 +530,10 @@ export default function Login() {
 
               <div className="flex justify-center w-full min-h-[40px]">
                 {googleAuthEnabled ? (
-                  <GoogleLogin
-                    onSuccess={handleGoogleSuccess}
-                    onError={handleGoogleError}
-                    theme="outline"
-                    shape="pill"
-                    size="medium"
-                    width="320"
-                    text="signup_with"
-                  />
+                  <div />
                 ) : (
                   <div className="text-[10px] text-[#737373] text-center leading-normal">
-                    Google sign-up is hidden until `VITE_GOOGLE_CLIENT_ID` is configured.
+                    Google sign-up is disabled until backend OAuth support is added.
                   </div>
                 )}
               </div>
