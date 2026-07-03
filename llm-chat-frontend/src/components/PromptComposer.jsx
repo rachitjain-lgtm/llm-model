@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { 
   Paperclip, 
@@ -19,15 +19,29 @@ import {
   setLoading, 
   updateLastMessageText, 
   addSourceToLastMessage,
-  updateChatSettings 
+  updateChatSettings,
+  renameChat
 } from "../store/chatSlice";
 import { 
   setActiveKbId, 
   toggleKbDropdown, 
   setKbDropdownOpen,
+<<<<<<< HEAD
   togglePromptLibraryModal
+=======
+  setPromptLibraryModalOpen 
+>>>>>>> 23c19ea2dc1f4a0130a5ce91cc3250ed8930c0a8
 } from "../store/uiSlice";
 import { chatApi } from "../api/chatApi";
+import { getModelLabel } from "../config/models";
+
+const createMessageId = (suffix) => {
+  if (globalThis.crypto?.randomUUID) {
+    return `msg-${globalThis.crypto.randomUUID()}-${suffix}`;
+  }
+
+  return `msg-${Math.random().toString(36).slice(2, 10)}-${suffix}`;
+};
 
 export default function PromptComposer() {
   const dispatch = useDispatch();
@@ -35,6 +49,7 @@ export default function PromptComposer() {
   const conversations = useSelector(state => state.chat.conversations);
   const activeChat = conversations.find(c => c.id === activeId);
   const isLoading = useSelector(state => state.chat.isLoading);
+  const streamingOn = useSelector(state => state.chat.streamingOn);
 
   const kbDropdownOpen = useSelector(state => state.ui.kbDropdownOpen);
   const activeKbId = useSelector(state => state.ui.activeKbId);
@@ -46,6 +61,7 @@ export default function PromptComposer() {
   
   const kbRef = useRef(null);
   const fileInputRef = useRef(null);
+  const textareaRef = useRef(null);
 
   // Close KB selector on click outside
   useEffect(() => {
@@ -57,6 +73,23 @@ export default function PromptComposer() {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [dispatch]);
+
+  // Listen for prompt library insertion events to fill input box
+  useEffect(() => {
+    const handleInsertPrompt = (e) => {
+      if (e.detail) {
+        setInputText(e.detail);
+        setTimeout(() => {
+          if (textareaRef.current) {
+            textareaRef.current.focus();
+            textareaRef.current.setSelectionRange(e.detail.length, e.detail.length);
+          }
+        }, 50);
+      }
+    };
+    window.addEventListener("insert-prompt", handleInsertPrompt);
+    return () => window.removeEventListener("insert-prompt", handleInsertPrompt);
+  }, []);
 
   if (!activeChat) return null;
 
@@ -123,7 +156,7 @@ export default function PromptComposer() {
     }
   };
 
-  const handleSend = () => {
+  const handleSend = async () => {
     if ((!inputText.trim() && attachments.length === 0) || isLoading) return;
 
     const userMessageText = inputText.trim();
@@ -139,7 +172,7 @@ export default function PromptComposer() {
     dispatch(addMessage({
       chatId: activeChat.id,
       message: {
-        id: `msg-${Date.now()}-user`,
+        id: createMessageId("user"),
         sender: "user",
         text: userMessageText,
         time: timeStr,
@@ -148,11 +181,18 @@ export default function PromptComposer() {
       }
     }));
 
+    if (activeChat.messages.length === 0 && userMessageText) {
+      dispatch(renameChat({
+        id: activeChat.id,
+        title: userMessageText.slice(0, 48)
+      }));
+    }
+
     // 2. Set loading state
     dispatch(setLoading(true));
 
     // 3. Add blank assistant bubble to stream into
-    const assistantMsgId = `msg-${Date.now()}-assistant`;
+    const assistantMsgId = createMessageId("assistant");
     dispatch(addMessage({
       chatId: activeChat.id,
       message: {
@@ -171,25 +211,42 @@ export default function PromptComposer() {
       fullPrompt = userMessageText ? `${userMessageText}\n\n${fileListStr}` : fileListStr;
     }
 
-    // 4. Trigger mock streaming
-    chatApi.sendMessageStream(
-      activeChat.id,
-      fullPrompt,
-      activeChat.model,
-      activeChat.useKnowledgeBase,
-      (chunk) => {
+    try {
+      chatApi.saveMessage(activeChat.id, {
+        sender: "user",
+        content: fullPrompt
+      }).catch((err) => console.error("Failed to save user message to DB:", err));
+
+      await chatApi.sendMessageStream({
+        conversation: activeChat,
+        prompt: fullPrompt,
+        streamingOn,
+        activeKb
+      }, (chunk) => {
         dispatch(updateLastMessageText({ chatId: activeChat.id, text: chunk }));
-      },
-      (finalText, sources) => {
+      }, (finalText, sources) => {
         dispatch(updateLastMessageText({ chatId: activeChat.id, text: finalText }));
+        chatApi.saveMessage(activeChat.id, {
+          sender: "assistant",
+          content: finalText
+        }).catch((err) => console.error("Failed to save assistant message to DB:", err));
         if (sources) {
           sources.forEach(src => {
             dispatch(addSourceToLastMessage({ chatId: activeChat.id, source: src }));
           });
         }
         dispatch(setLoading(false));
-      }
-    );
+      });
+    } catch (error) {
+      dispatch(updateLastMessageText({
+        chatId: activeChat.id,
+        text: `Request failed for **${getModelLabel(activeChat.model)}**.
+${error.message}
+
+If you're using a free model, double-check that the model ID is still available and that your OpenRouter API key is valid.`
+      }));
+      dispatch(setLoading(false));
+    }
   };
 
   const handleKeyDown = (e) => {
@@ -285,11 +342,12 @@ export default function PromptComposer() {
 
         {/* Text Input area */}
         <textarea
+          ref={textareaRef}
           rows={2}
           value={inputText}
           onChange={(e) => setInputText(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder={`Message ${activeChat.model}... (Drag & drop or attach files)`}
+          placeholder={`Message ${getModelLabel(activeChat.model)}... (Drag & drop or attach files)`}
           className="w-full resize-none bg-transparent text-xs text-[#171717] dark:text-[#eceff1] placeholder-[#A3A3A3] dark:placeholder-[#64748B] focus:outline-none p-1 font-sans font-medium transition-colors"
         />
 
@@ -398,7 +456,11 @@ export default function PromptComposer() {
 
             {/* Prompt Library */}
             <button 
+<<<<<<< HEAD
               onClick={() => dispatch(togglePromptLibraryModal())}
+=======
+              onClick={() => dispatch(setPromptLibraryModalOpen(true))}
+>>>>>>> 23c19ea2dc1f4a0130a5ce91cc3250ed8930c0a8
               className="h-9 px-3 hover:bg-[#FAFAFA] dark:hover:bg-[#23272A] border border-transparent hover:border-[#E7E7E7] dark:border-[#23272A] rounded-xl flex items-center gap-2 text-[11px] font-semibold text-[#737373] dark:text-[#94A3B8] hover:text-[#171717] dark:hover:text-[#eceff1] transition-all cursor-pointer"
             >
               <BookOpen size={14} />

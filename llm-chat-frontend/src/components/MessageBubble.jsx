@@ -1,5 +1,9 @@
+<<<<<<< HEAD
 import React, { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
+=======
+import { useState } from "react";
+>>>>>>> 23c19ea2dc1f4a0130a5ce91cc3250ed8930c0a8
 import { 
   ThumbsUp, 
   ThumbsDown, 
@@ -7,7 +11,6 @@ import {
   Check, 
   ExternalLink,
   Info,
-  Paperclip,
   FileText,
   Image as ImageIcon,
   FileCode,

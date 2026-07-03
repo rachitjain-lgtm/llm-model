@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { 
   Mail, 
@@ -12,27 +12,46 @@ import {
   CheckCircle2, 
   KeyRound 
 } from "lucide-react";
-import { GoogleLogin } from "@react-oauth/google";
-import { jwtDecode } from "jwt-decode";
 import { 
   authStart, 
-  loginSuccess, 
+  loginSuccess,
   authFailure, 
   registerSuccess, 
   recoverySuccess, 
   resetPasswordSuccess,
   clearError 
 } from "../store/authSlice";
+import axiosClient from "../api/axiosClient";
+
+const getResetContext = () => {
+  if (typeof window === "undefined") {
+    return {
+      initialEmail: "",
+      initialView: "login"
+    };
+  }
+
+  const params = new URLSearchParams(window.location.search);
+
+  return {
+    initialEmail: params.get("email") || "",
+    initialView: params.get("reset") === "true" || params.has("token")
+      ? "reset-password"
+      : "login"
+  };
+};
 
 export default function Login() {
   const dispatch = useDispatch();
-  const { isLoading, error, usersDb, recoveryEmailSent } = useSelector((state) => state.auth);
+  const { isLoading, error, recoveryEmailSent } = useSelector((state) => state.auth);
+  const googleAuthEnabled = false;
+  const { initialEmail, initialView } = getResetContext();
 
   // View state: 'login' | 'signup' | 'forgot' | 'reset-password'
-  const [view, setView] = useState("login");
+  const [view, setView] = useState(initialView);
 
   // Input states
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(initialEmail);
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -49,51 +68,14 @@ export default function Login() {
   const [nameError, setNameError] = useState("");
   const [confirmPasswordError, setConfirmPasswordError] = useState("");
 
-  // Check URL query parameters for reset links (e.g. ?reset=true&email=user@example.com)
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const params = new URLSearchParams(window.location.search);
-      const urlEmail = params.get("email");
-      const isReset = params.get("reset");
-      if (urlEmail) setEmail(urlEmail);
-      if (isReset === "true" || params.has("token")) {
-        setView("reset-password");
-      }
-    }
-  }, []);
-
-  const handleGoogleSuccess = (credentialResponse) => {
-    try {
-      dispatch(authStart());
-      if (credentialResponse.credential) {
-        const decoded = jwtDecode(credentialResponse.credential);
-        const userObj = {
-          email: decoded.email,
-          name: decoded.name || decoded.given_name || "Google User",
-          picture: decoded.picture,
-          isGoogle: true,
-          sub: decoded.sub
-        };
-        dispatch(loginSuccess(userObj));
-      }
-    } catch (err) {
-      console.error("Google auth decode error:", err);
-      dispatch(authFailure("Google Sign-In failed to process credentials."));
-    }
-  };
-
-  const handleGoogleError = () => {
-    dispatch(authFailure("Google Sign-In was cancelled or encountered an error."));
-  };
-
-  // Clear errors on switching tabs/views
-  useEffect(() => {
+  const switchView = (nextView) => {
     dispatch(clearError());
     setEmailError("");
     setPasswordError("");
     setNameError("");
     setConfirmPasswordError("");
-  }, [view, dispatch]);
+    setView(nextView);
+  };
 
   const validateLogin = () => {
     let valid = true;
@@ -170,54 +152,50 @@ export default function Login() {
     return valid;
   };
 
-  const handleLoginSubmit = (e) => {
+  const handleLoginSubmit = async (e) => {
     e.preventDefault();
     if (!validateLogin()) return;
 
     dispatch(authStart());
-
-    setTimeout(() => {
-      // Find matching user from local database
-      const matched = usersDb.find(u => u.email.toLowerCase() === email.trim().toLowerCase());
-      
-      if (matched && matched.password === password) {
-        dispatch(loginSuccess({
-          email: matched.email,
-          name: matched.name,
-          avatar: ""
-        }));
+    try {
+      const response = await axiosClient.post("/auth/login", {
+        email: email.trim(),
+        password: password,
+      });
+      if (response.data && response.data.success) {
+        const { user, accessToken, refreshToken } = response.data.data;
+        dispatch(loginSuccess({ user, accessToken, refreshToken }));
       } else {
-        dispatch(authFailure("Invalid email or password."));
+        dispatch(authFailure(response.data.message || "Login failed."));
       }
-    }, 1000);
+    } catch (err) {
+      const msg = err.response?.data?.message || err.message || "Failed to connect to backend server.";
+      dispatch(authFailure(msg));
+    }
   };
 
-  const handleSignupSubmit = (e) => {
+  const handleSignupSubmit = async (e) => {
     e.preventDefault();
     if (!validateSignup()) return;
 
     dispatch(authStart());
-
-    setTimeout(() => {
-      const exists = usersDb.some(u => u.email.toLowerCase() === email.trim().toLowerCase());
-      
-      if (exists) {
-        dispatch(authFailure("This email is already registered."));
+    try {
+      const response = await axiosClient.post("/auth/register", {
+        name: name.trim(),
+        email: email.trim(),
+        password: password,
+      });
+      if (response.data && response.data.success) {
+        const { user, accessToken, refreshToken } = response.data.data;
+        dispatch(registerSuccess());
+        dispatch(loginSuccess({ user, accessToken, refreshToken }));
       } else {
-        const newUser = {
-          email: email.trim(),
-          password: password,
-          name: name.trim()
-        };
-        dispatch(registerSuccess(newUser));
-        // Auto login on successful signup
-        dispatch(loginSuccess({
-          email: newUser.email,
-          name: newUser.name,
-          avatar: ""
-        }));
+        dispatch(authFailure(response.data.message || "Registration failed."));
       }
-    }, 1000);
+    } catch (err) {
+      const msg = err.response?.data?.message || err.message || "Failed to register account.";
+      dispatch(authFailure(msg));
+    }
   };
 
   const handleForgotSubmit = (e) => {
@@ -331,7 +309,7 @@ export default function Login() {
                 </label>
                 <button
                   type="button"
-                  onClick={() => setView("forgot")}
+                  onClick={() => switchView("forgot")}
                   className="text-[10px] font-bold text-[#245955] hover:text-[#1e4b48] cursor-pointer"
                 >
                   Forgot Password?
@@ -392,15 +370,13 @@ export default function Login() {
               </div>
 
               <div className="flex justify-center w-full min-h-[40px]">
-                <GoogleLogin
-                  onSuccess={handleGoogleSuccess}
-                  onError={handleGoogleError}
-                  theme="outline"
-                  shape="pill"
-                  size="medium"
-                  width="320"
-                  text="signin_with"
-                />
+                {googleAuthEnabled ? (
+                  <div />
+                ) : (
+                  <div className="text-[10px] text-[#737373] text-center leading-normal">
+                    Google sign-in is disabled until backend OAuth support is added.
+                  </div>
+                )}
               </div>
             </div>
 
@@ -408,7 +384,7 @@ export default function Login() {
               Don't have an account?{" "}
               <button
                 type="button"
-                onClick={() => setView("signup")}
+                onClick={() => switchView("signup")}
                 className="font-bold text-[#245955] hover:text-[#1e4b48] cursor-pointer"
               >
                 Sign Up
@@ -558,15 +534,13 @@ export default function Login() {
               </div>
 
               <div className="flex justify-center w-full min-h-[40px]">
-                <GoogleLogin
-                  onSuccess={handleGoogleSuccess}
-                  onError={handleGoogleError}
-                  theme="outline"
-                  shape="pill"
-                  size="medium"
-                  width="320"
-                  text="signup_with"
-                />
+                {googleAuthEnabled ? (
+                  <div />
+                ) : (
+                  <div className="text-[10px] text-[#737373] text-center leading-normal">
+                    Google sign-up is disabled until backend OAuth support is added.
+                  </div>
+                )}
               </div>
             </div>
 
@@ -574,7 +548,7 @@ export default function Login() {
               Already have an account?{" "}
               <button
                 type="button"
-                onClick={() => setView("login")}
+                onClick={() => switchView("login")}
                 className="font-bold text-[#245955] hover:text-[#1e4b48] cursor-pointer"
               >
                 Sign In
@@ -611,7 +585,7 @@ export default function Login() {
                       setNewPassword("");
                       setConfirmNewPassword("");
                       setResetSuccess(false);
-                      setView("reset-password");
+                      switchView("reset-password");
                     }}
                     className="w-full h-10 bg-[#245955] hover:bg-[#1e4b48] text-white rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-2 shadow-sm"
                   >
@@ -621,7 +595,7 @@ export default function Login() {
 
                 <button
                   onClick={() => {
-                    setView("login");
+                    switchView("login");
                     setEmail("");
                   }}
                   className="inline-flex items-center gap-1.5 text-xs font-bold text-[#737373] hover:text-[#171717] cursor-pointer"
@@ -677,7 +651,7 @@ export default function Login() {
                 <div className="text-center mt-5">
                   <button
                     type="button"
-                    onClick={() => setView("login")}
+                    onClick={() => switchView("login")}
                     className="inline-flex items-center gap-1.5 text-xs font-bold text-[#245955] hover:text-[#1e4b48] cursor-pointer"
                   >
                     <ArrowLeft size={14} />
@@ -704,7 +678,7 @@ export default function Login() {
                   </p>
                 </div>
                 <button
-                  onClick={() => setView("login")}
+                  onClick={() => switchView("login")}
                   className="w-full h-11 bg-[#245955] hover:bg-[#1e4b48] text-white rounded-xl text-xs font-bold transition-all cursor-pointer shadow-md mt-2"
                 >
                   Sign In with New Password
@@ -795,7 +769,7 @@ export default function Login() {
                 <div className="text-center mt-4">
                   <button
                     type="button"
-                    onClick={() => setView("login")}
+                    onClick={() => switchView("login")}
                     className="inline-flex items-center gap-1.5 text-xs font-bold text-[#737373] hover:text-[#171717] cursor-pointer"
                   >
                     <ArrowLeft size={14} />
@@ -810,7 +784,7 @@ export default function Login() {
         {/* Demo Helper Hint */}
         <div className="mt-8 text-center pt-5 border-t border-[#E7E7E7]/60">
           <p className="text-[10px] text-[#A3A3A3] leading-normal">
-            For demonstration, register any account to save it into the mock local database, or use: **demo@bedrock.com** / **password123**
+            For demonstration, register any account to save it into the local browser database, or use: demo@bedrock.com / password123
           </p>
         </div>
 

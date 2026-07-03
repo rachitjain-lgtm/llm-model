@@ -1,6 +1,11 @@
+<<<<<<< HEAD
 import React, { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { X, Sun, Moon, Laptop, ShieldCheck, Cpu, Trash2, CheckCircle2 } from "lucide-react";
+=======
+import { useDispatch, useSelector } from "react-redux";
+import { X, Sun, Moon, ShieldCheck, Cpu } from "lucide-react";
+>>>>>>> 23c19ea2dc1f4a0130a5ce91cc3250ed8930c0a8
 import { setSettingsModalOpen, setTheme } from "../store/uiSlice";
 import { clearActiveChat } from "../store/chatSlice";
 
@@ -8,12 +13,16 @@ export default function SettingsModal() {
   const dispatch = useDispatch();
   const settingsModalOpen = useSelector((state) => state.ui.settingsModalOpen);
   const theme = useSelector((state) => state.ui.theme);
+<<<<<<< HEAD
   const activeId = useSelector((state) => state.chat.activeConversationId);
   const conversations = useSelector((state) => state.chat.conversations);
   const activeChat = conversations.find((c) => c.id === activeId);
 
   const [confirmClear, setConfirmClear] = useState(false);
   const [clearedSuccess, setClearedSuccess] = useState(false);
+=======
+  const providerName = useSelector((state) => state.ui.providerName);
+>>>>>>> 23c19ea2dc1f4a0130a5ce91cc3250ed8930c0a8
 
   if (!settingsModalOpen) return null;
 
@@ -32,23 +41,17 @@ export default function SettingsModal() {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      {/* Backdrop */}
-      <div 
+      <div
         onClick={() => dispatch(setSettingsModalOpen(false))}
         className="absolute inset-0 bg-black/60 dark:bg-black/80 backdrop-blur-md cursor-pointer transition-opacity"
       />
 
-      {/* Modal Card */}
       <div className="relative w-full max-w-md bg-white dark:bg-[#16191B] border border-[#E7E7E7] dark:border-[#23272A] rounded-2xl shadow-2xl overflow-hidden flex flex-col transition-colors duration-200 transform animate-in fade-in zoom-in-95 duration-200">
-        
-        {/* Header */}
         <div className="p-5 border-b border-[#E7E7E7] dark:border-[#23272A] flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <h3 className="text-sm font-bold text-[#171717] dark:text-[#eceff1] font-montserrat tracking-wide">
-              Global Settings
-            </h3>
-          </div>
-          <button 
+          <h3 className="text-sm font-bold text-[#171717] dark:text-[#eceff1] font-montserrat tracking-wide">
+            Global Settings
+          </h3>
+          <button
             onClick={() => dispatch(setSettingsModalOpen(false))}
             className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-[#23272A] text-[#737373] dark:text-[#94A3B8] hover:text-[#171717] dark:hover:text-[#eceff1] transition-colors"
           >
@@ -56,9 +59,7 @@ export default function SettingsModal() {
           </button>
         </div>
 
-        {/* Content */}
         <div className="p-6 space-y-6">
-          {/* Theme Selection */}
           <div className="space-y-2">
             <label className="text-[11px] font-semibold text-[#737373] dark:text-[#94A3B8] uppercase tracking-wider block">
               Interface Theme
@@ -69,7 +70,7 @@ export default function SettingsModal() {
                 className={`flex items-center justify-center gap-2 py-3 px-4 rounded-xl border text-xs font-semibold cursor-pointer transition-all duration-200 ${
                   theme === "light"
                     ? "bg-[#245955] text-white border-[#245955] shadow-sm shadow-[#245955]/20"
-                    : "bg-white dark:bg-[#1E2326] border-[#E7E7E7] dark:border-[#23272A] text-[#737373] dark:text-[#94A3B8] hover:bg-slate-55 hover:text-[#171717] dark:hover:bg-[#262B2E] dark:hover:text-[#eceff1]"
+                    : "bg-white dark:bg-[#1E2326] border-[#E7E7E7] dark:border-[#23272A] text-[#737373] dark:text-[#94A3B8] hover:text-[#171717] dark:hover:bg-[#262B2E] dark:hover:text-[#eceff1]"
                 }`}
               >
                 <Sun size={14} />
@@ -80,7 +81,7 @@ export default function SettingsModal() {
                 className={`flex items-center justify-center gap-2 py-3 px-4 rounded-xl border text-xs font-semibold cursor-pointer transition-all duration-200 ${
                   theme === "dark"
                     ? "bg-[#245955] text-white border-[#245955] shadow-sm shadow-[#245955]/20"
-                    : "bg-white dark:bg-[#1E2326] border-[#E7E7E7] dark:border-[#23272A] text-[#737373] dark:text-[#94A3B8] hover:bg-slate-55 hover:text-[#171717] dark:hover:bg-[#262B2E] dark:hover:text-[#eceff1]"
+                    : "bg-white dark:bg-[#1E2326] border-[#E7E7E7] dark:border-[#23272A] text-[#737373] dark:text-[#94A3B8] hover:text-[#171717] dark:hover:bg-[#262B2E] dark:hover:text-[#eceff1]"
                 }`}
               >
                 <Moon size={14} />
@@ -89,6 +90,7 @@ export default function SettingsModal() {
             </div>
           </div>
 
+<<<<<<< HEAD
           {/* Opened Conversation Management */}
           <div className="space-y-3">
             <label className="text-[11px] font-semibold text-[#737373] dark:text-[#94A3B8] uppercase tracking-wider block">
@@ -137,6 +139,30 @@ export default function SettingsModal() {
           </div>
 
           {/* Connection Status & Infrastructure details */}
+=======
+          <div className="space-y-2">
+            <label className="text-[11px] font-semibold text-[#737373] dark:text-[#94A3B8] uppercase tracking-wider block">
+              Model API
+            </label>
+            <div className="space-y-3 p-4 bg-[#FAFAFA] dark:bg-[#1E2326] border border-[#E7E7E7] dark:border-[#23272A] rounded-xl transition-colors">
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-semibold text-[#171717] dark:text-[#eceff1] block">
+                  Provider
+                </label>
+                <input
+                  type="text"
+                  value={providerName}
+                  disabled
+                  className="w-full h-10 px-3.5 bg-white dark:bg-[#16191B] border border-[#E7E7E7] dark:border-[#23272A] rounded-lg text-xs text-[#737373] dark:text-[#94A3B8] font-semibold"
+                />
+              </div>
+              <p className="text-[10px] text-[#737373] dark:text-[#94A3B8] leading-normal">
+                Model requests are now routed through the backend. Configure `OPENROUTER_API_KEY` in `backend/.env` instead of storing secrets in the browser.
+              </p>
+            </div>
+          </div>
+
+>>>>>>> 23c19ea2dc1f4a0130a5ce91cc3250ed8930c0a8
           <div className="space-y-3">
             <label className="text-[11px] font-semibold text-[#737373] dark:text-[#94A3B8] uppercase tracking-wider block">
               Infrastructure Status
@@ -148,26 +174,25 @@ export default function SettingsModal() {
                   <span>Base Provider</span>
                 </div>
                 <span className="text-xs font-semibold text-[#171717] dark:text-[#eceff1]">
-                  Cloud AI
+                  {providerName}
                 </span>
               </div>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 text-xs font-medium text-[#737373] dark:text-[#94A3B8]">
                   <ShieldCheck size={14} />
-                  <span>Security Gateway</span>
+                  <span>API Key Status</span>
                 </div>
                 <span className="flex items-center gap-1.5 text-xs font-semibold text-[#245955] dark:text-[#347d78]">
                   <span className="w-1.5 h-1.5 rounded-full bg-[#245955] dark:bg-[#347d78] animate-pulse" />
-                  Active
+                  Backend-managed
                 </span>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Footer */}
         <div className="p-5 bg-[#FAFAFA] dark:bg-[#1A1D1F] border-t border-[#E7E7E7] dark:border-[#23272A] flex justify-end gap-3 transition-colors">
-          <button 
+          <button
             onClick={() => dispatch(setSettingsModalOpen(false))}
             className="px-4 h-9 bg-white dark:bg-[#1E2326] hover:bg-slate-100 dark:hover:bg-[#262B2E] border border-[#E7E7E7] dark:border-[#23272A] rounded-lg text-xs font-semibold text-[#171717] dark:text-[#eceff1] cursor-pointer shadow-sm transition-colors"
           >

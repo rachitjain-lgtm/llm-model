@@ -1,177 +1,83 @@
-import { createSlice } from "@reduxjs/toolkit";
+import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
+import { chatApi } from "../api/chatApi";
+import { DEFAULT_MODEL_ID } from "../config/models";
 
-const mockConversations = [
-  {
-    id: "chat-1",
-    title: "AI Assistant overview",
-    timestamp: "Today, 10:24 AM",
-    model: "Claude 3 Sonnet",
-    provider: "Cloud AI",
-    region: "us-east-1",
-    temperature: 0.7,
-    maxTokens: 4096,
-    useKnowledgeBase: true,
-    useGuardrails: true,
-    messages: [
-      {
-        id: "msg-1-1",
-        sender: "user",
-        text: "Can you explain how this Cloud AI platform works and its key features?",
-        time: "10:24 AM",
-        initials: "AR"
-      },
-      {
-        id: "msg-1-2",
-        sender: "assistant",
-        text: `The Cloud AI platform is a fully managed service that offers a choice of high-performing foundation models (FMs) from leading AI companies through a single API, along with a broad set of capabilities you need to build generative AI applications with security, privacy, and responsible AI.
-
-### Key features
-
-* **Choice of leading foundation models**: Access Claude, Llama, Titan, etc.
-* **Serverless experience**: Fully managed, no infrastructure to set up.
-* **Data privacy and security**: Your data is encrypted and remains within your VPC.
-* **Responsible AI with guardrails**: Implement safety thresholds for content filters.
-* **Knowledge Bases for RAG applications**: Build customized AI connected to your private documentation.
-
-Learn more in the platform documentation.`,
-        time: "10:25 AM",
-        sources: [
-          {
-            title: "Cloud AI Platform Guide",
-            url: "https://example.com/docs/what-is-cloud-ai"
-          }
-        ]
-      }
-    ]
-  },
-  {
-    id: "chat-2",
-    title: "Compare Claude vs Llama",
-    timestamp: "Today, 09:15 AM",
-    model: "Claude 3 Sonnet",
-    provider: "Cloud AI",
-    region: "us-east-1",
-    temperature: 0.7,
-    maxTokens: 4096,
-    useKnowledgeBase: false,
-    useGuardrails: true,
-    messages: [
-      {
-        id: "msg-2-1",
-        sender: "user",
-        text: "Compare Claude 3 Sonnet vs Llama 3 70B",
-        time: "09:15 AM",
-        initials: "AR"
-      },
-      {
-        id: "msg-2-2",
-        sender: "assistant",
-        text: `Here is a quick comparison of Claude 3 Sonnet and Llama 3 70B:
-
-1. **Developer**: Claude 3 Sonnet is created by Anthropic, while Llama 3 70B is created by Meta.
-2. **Strengths**: Claude is outstanding for complex reasoning, multilingual processing, and writing clean code. Llama 3 70B is highly cost-effective and performs exceptionally for dialogue, summarization, and general instructions.
-3. **Context Window**: Claude 3 Sonnet supports up to 200k tokens, providing robust long-document support. Llama 3 70B supports 8k tokens.`,
-        time: "09:16 AM"
-      }
-    ]
-  },
-  {
-    id: "chat-3",
-    title: "Summarize product docs",
-    timestamp: "Yesterday, 04:32 PM",
-    model: "Claude 3 Sonnet",
-    provider: "Cloud AI",
-    region: "us-east-1",
-    temperature: 0.7,
-    maxTokens: 4096,
-    useKnowledgeBase: true,
-    useGuardrails: true,
-    messages: [
-      {
-        id: "msg-3-1",
-        sender: "user",
-        text: "Can you help me summarize my product docs?",
-        time: "04:32 PM",
-        initials: "AR"
-      },
-      {
-        id: "msg-3-2",
-        sender: "assistant",
-        text: "Sure! Please paste the product documentation here, or verify that your Product Docs Knowledge Base is turned on in the bottom composer or the run controls panel so I can reference it.",
-        time: "04:33 PM"
-      }
-    ]
-  },
-  {
-    id: "chat-4",
-    title: "Create SQL query",
-    timestamp: "Yesterday, 10:03 AM",
-    model: "Claude 3 Sonnet",
-    provider: "Cloud AI",
-    region: "us-east-1",
-    temperature: 0.5,
-    maxTokens: 2048,
-    useKnowledgeBase: false,
-    useGuardrails: false,
-    messages: [
-      {
-        id: "msg-4-1",
-        sender: "user",
-        text: "Write a SQL query to find users who signed up in the last 30 days and ordered more than $100.",
-        time: "10:03 AM",
-        initials: "AR"
-      },
-      {
-        id: "msg-4-2",
-        sender: "assistant",
-        text: `Here is the SQL query to retrieve that user list:
-
-\`\`\`sql
-SELECT u.id, u.name, u.email, SUM(o.amount) as total_spent
-FROM users u
-JOIN orders o ON u.id = o.user_id
-WHERE u.signup_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
-GROUP BY u.id
-HAVING total_spent > 100;
-\`\`\``,
-        time: "10:03 AM"
-      }
-    ]
-  },
-  {
-    id: "chat-5",
-    title: "Marketing campaign ideas",
-    timestamp: "Jun 29, 02:11 PM",
-    model: "Llama 3 70B",
-    provider: "Cloud AI",
-    region: "us-east-1",
-    temperature: 0.8,
-    maxTokens: 4096,
-    useKnowledgeBase: false,
-    useGuardrails: true,
-    messages: [
-      {
-        id: "msg-5-1",
-        sender: "user",
-        text: "List 5 creative ideas for B2B SaaS launch campaign.",
-        time: "02:11 PM",
-        initials: "AR"
-      },
-      {
-        id: "msg-5-2",
-        sender: "assistant",
-        text: `Here are 5 creative campaign ideas for your B2B SaaS launch:
-
-1. **The Interactive Audit Tool**: A quick 2-minute calculator showing prospects exactly where they are losing revenue, leading directly to your signup flow.
-2. **Private Beta Behind-the-Scenes Vlogs**: A weekly series featuring founders discussing scaling challenges, humanizing the product and generating organic traction.
-3. **The "Anti-Complexity" Web Series**: Short, funny videos highlighting the manual processes your tool eliminates.
-4. **Industry Leader Roundtable**: Invite top minds for a virtual panel on current issues, showcasing your SaaS as a thought leader in the space.
-5. **Co-branded Infographics**: Partner with a non-competing tool to co-publish an insightful industry dataset, widening your reach.`,
-        time: "02:12 PM"
-      }
-    ]
+export const fetchChats = createAsyncThunk("chat/fetchChats", async (_, { rejectWithValue }) => {
+  try {
+    const chats = await chatApi.fetchUserChats();
+    return chats;
+  } catch (err) {
+    return rejectWithValue(err.response?.data?.message || err.message);
   }
-];
+});
+
+export const createChatAsync = createAsyncThunk("chat/createChatAsync", async (chatData, { rejectWithValue }) => {
+  try {
+    const newChat = await chatApi.createChat(chatData || {});
+    return newChat;
+  } catch (err) {
+    return rejectWithValue(err.response?.data?.message || err.message);
+  }
+});
+
+export const deleteChatAsync = createAsyncThunk("chat/deleteChatAsync", async (chatId, { rejectWithValue }) => {
+  try {
+    await chatApi.deleteChat(chatId);
+    return chatId;
+  } catch (err) {
+    return rejectWithValue(err.response?.data?.message || err.message);
+  }
+});
+
+export const renameChatAsync = createAsyncThunk("chat/renameChatAsync", async ({ id, title }, { rejectWithValue }) => {
+  try {
+    await chatApi.renameChat(id, title);
+    return { id, title };
+  } catch (err) {
+    return rejectWithValue(err.response?.data?.message || err.message);
+  }
+});
+
+export const addMessageAsync = createAsyncThunk("chat/addMessageAsync", async ({ chatId, sender, content }, { rejectWithValue }) => {
+  try {
+    const message = await chatApi.saveMessage(chatId, { sender, content });
+    return { chatId, message };
+  } catch (err) {
+    return rejectWithValue(err.response?.data?.message || err.message);
+  }
+});
+
+const getStoredConversations = () => {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  const saved = localStorage.getItem("chat_conversations");
+
+  if (!saved) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(saved);
+  } catch {
+    return null;
+  }
+};
+
+const persistState = (state) => {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  localStorage.setItem("chat_conversations", JSON.stringify(state.conversations));
+  localStorage.setItem("chat_active_conversation_id", state.activeConversationId || "");
+};
+
+const storedConversations = getStoredConversations();
+const storedActiveConversationId = typeof window !== "undefined"
+  ? localStorage.getItem("chat_active_conversation_id")
+  : null;
 
 const getUserConversations = (email) => {
   if (typeof window === "undefined" || !email) return [];
@@ -218,35 +124,62 @@ const initialEmail = getInitialUserEmail();
 const initialConversations = getUserConversations(initialEmail);
 
 const initialState = {
+<<<<<<< HEAD
   conversations: initialConversations,
   activeConversationId: initialConversations.length > 0 ? initialConversations[0].id : null,
   searchQuery: "",
   isLoading: false,
   currentUserEmail: initialEmail
+=======
+  conversations: storedConversations || [],
+  activeConversationId: storedActiveConversationId || null,
+  searchQuery: "",
+  streamingOn: true,
+  isLoading: false,
+  error: null
+>>>>>>> 23c19ea2dc1f4a0130a5ce91cc3250ed8930c0a8
 };
 
 const chatSlice = createSlice({
   name: "chat",
   initialState,
   reducers: {
+<<<<<<< HEAD
     loadUserConversations(state, action) {
       const email = action.payload;
       state.currentUserEmail = email;
       const userConvs = getUserConversations(email);
       state.conversations = userConvs;
       state.activeConversationId = userConvs.length > 0 ? userConvs[0].id : null;
+=======
+    setConversations(state, action) {
+      state.conversations = action.payload;
+      if (action.payload.length > 0 && !state.activeConversationId) {
+        state.activeConversationId = action.payload[0].id;
+      }
+      persistState(state);
+>>>>>>> 23c19ea2dc1f4a0130a5ce91cc3250ed8930c0a8
     },
     setActiveConversation(state, action) {
       state.activeConversationId = action.payload;
+      persistState(state);
     },
     createNewChat(state) {
       const id = `chat-${Date.now()}`;
       const newChat = {
         id,
+<<<<<<< HEAD
         title: "New Conversation",
         timestamp: "Today, " + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         model: "Claude 3 Sonnet",
         provider: "Cloud AI",
+=======
+        title: "New chat",
+        timestamp: "Today, " + new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        model: DEFAULT_MODEL_ID,
+        provider: "OpenRouter",
+        region: "global",
+>>>>>>> 23c19ea2dc1f4a0130a5ce91cc3250ed8930c0a8
         temperature: 0.7,
         maxTokens: 4096,
         useKnowledgeBase: false,
@@ -255,29 +188,45 @@ const chatSlice = createSlice({
       };
       state.conversations.unshift(newChat);
       state.activeConversationId = id;
+<<<<<<< HEAD
       saveUserConversations(state.currentUserEmail, state.conversations);
+=======
+      persistState(state);
+>>>>>>> 23c19ea2dc1f4a0130a5ce91cc3250ed8930c0a8
     },
     deleteChat(state, action) {
-      state.conversations = state.conversations.filter(c => c.id !== action.payload);
+      state.conversations = state.conversations.filter((conversation) => conversation.id !== action.payload);
       if (state.activeConversationId === action.payload) {
         state.activeConversationId = state.conversations[0]?.id || null;
       }
+<<<<<<< HEAD
       saveUserConversations(state.currentUserEmail, state.conversations);
+=======
+      persistState(state);
+>>>>>>> 23c19ea2dc1f4a0130a5ce91cc3250ed8930c0a8
     },
     renameChat(state, action) {
       const { id, title } = action.payload;
-      const chat = state.conversations.find(c => c.id === id);
+      const chat = state.conversations.find((conversation) => conversation.id === id);
       if (chat) {
         chat.title = title;
+<<<<<<< HEAD
         saveUserConversations(state.currentUserEmail, state.conversations);
+=======
+        persistState(state);
+>>>>>>> 23c19ea2dc1f4a0130a5ce91cc3250ed8930c0a8
       }
     },
     updateChatSettings(state, action) {
       const { id, key, value } = action.payload;
-      const chat = state.conversations.find(c => c.id === id);
+      const chat = state.conversations.find((conversation) => conversation.id === id);
       if (chat) {
         chat[key] = value;
+<<<<<<< HEAD
         saveUserConversations(state.currentUserEmail, state.conversations);
+=======
+        persistState(state);
+>>>>>>> 23c19ea2dc1f4a0130a5ce91cc3250ed8930c0a8
       }
     },
     setSearchQuery(state, action) {
@@ -288,31 +237,40 @@ const chatSlice = createSlice({
     },
     addMessage(state, action) {
       const { chatId, message } = action.payload;
-      const chat = state.conversations.find(c => c.id === chatId);
+      const chat = state.conversations.find((conversation) => conversation.id === chatId);
       if (chat) {
         chat.messages.push(message);
+<<<<<<< HEAD
         saveUserConversations(state.currentUserEmail, state.conversations);
+=======
+        persistState(state);
+>>>>>>> 23c19ea2dc1f4a0130a5ce91cc3250ed8930c0a8
       }
     },
     updateLastMessageText(state, action) {
       const { chatId, text } = action.payload;
-      const chat = state.conversations.find(c => c.id === chatId);
+      const chat = state.conversations.find((conversation) => conversation.id === chatId);
       if (chat && chat.messages.length > 0) {
         const lastMsg = chat.messages[chat.messages.length - 1];
         if (lastMsg.sender === "assistant") {
           lastMsg.text = text;
+<<<<<<< HEAD
           saveUserConversations(state.currentUserEmail, state.conversations);
+=======
+          persistState(state);
+>>>>>>> 23c19ea2dc1f4a0130a5ce91cc3250ed8930c0a8
         }
       }
     },
     addSourceToLastMessage(state, action) {
       const { chatId, source } = action.payload;
-      const chat = state.conversations.find(c => c.id === chatId);
+      const chat = state.conversations.find((conversation) => conversation.id === chatId);
       if (chat && chat.messages.length > 0) {
         const lastMsg = chat.messages[chat.messages.length - 1];
         if (lastMsg.sender === "assistant") {
           if (!lastMsg.sources) lastMsg.sources = [];
           lastMsg.sources.push(source);
+<<<<<<< HEAD
           saveUserConversations(state.currentUserEmail, state.conversations);
         }
       }
@@ -333,14 +291,74 @@ const chatSlice = createSlice({
         if (msg) {
           msg.text = newText;
           saveUserConversations(state.currentUserEmail, state.conversations);
+=======
+          persistState(state);
+>>>>>>> 23c19ea2dc1f4a0130a5ce91cc3250ed8930c0a8
         }
       }
+    },
+    syncActiveConversation(state, action) {
+      state.activeConversationId = action.payload;
+      persistState(state);
     }
+  },
+  extraReducers: (builder) => {
+    builder
+      .addCase(fetchChats.pending, (state) => {
+        state.isLoading = true;
+      })
+      .addCase(fetchChats.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.conversations = action.payload;
+        if (action.payload.length > 0) {
+          state.activeConversationId = action.payload[0].id;
+        }
+        persistState(state);
+      })
+      .addCase(fetchChats.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload;
+      })
+      .addCase(createChatAsync.fulfilled, (state, action) => {
+        state.conversations.unshift(action.payload);
+        state.activeConversationId = action.payload.id;
+        persistState(state);
+      })
+      .addCase(deleteChatAsync.fulfilled, (state, action) => {
+        state.conversations = state.conversations.filter((conversation) => conversation.id !== action.payload);
+        if (state.activeConversationId === action.payload) {
+          state.activeConversationId = state.conversations[0]?.id || null;
+        }
+        persistState(state);
+      })
+      .addCase(renameChatAsync.fulfilled, (state, action) => {
+        const { id, title } = action.payload;
+        const chat = state.conversations.find((conversation) => conversation.id === id);
+        if (chat) {
+          chat.title = title;
+          persistState(state);
+        }
+      })
+      .addCase(addMessageAsync.fulfilled, (state, action) => {
+        const { chatId, message } = action.payload;
+        const chat = state.conversations.find((conversation) => conversation.id === chatId);
+        if (chat) {
+          const exists = chat.messages.some((existingMessage) => existingMessage.id === message.id);
+          if (!exists) {
+            chat.messages.push(message);
+            persistState(state);
+          }
+        }
+      });
   }
 });
 
 export const {
+<<<<<<< HEAD
   loadUserConversations,
+=======
+  setConversations,
+>>>>>>> 23c19ea2dc1f4a0130a5ce91cc3250ed8930c0a8
   setActiveConversation,
   createNewChat,
   deleteChat,
@@ -351,8 +369,12 @@ export const {
   addMessage,
   updateLastMessageText,
   addSourceToLastMessage,
+<<<<<<< HEAD
   clearActiveChat,
   editMessage
+=======
+  syncActiveConversation
+>>>>>>> 23c19ea2dc1f4a0130a5ce91cc3250ed8930c0a8
 } = chatSlice.actions;
 
 export default chatSlice.reducer;

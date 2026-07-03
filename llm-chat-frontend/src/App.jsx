@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import { useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import Sidebar from "./components/Sidebar";
 import Topbar from "./components/Topbar";
@@ -8,7 +8,11 @@ import SettingsModal from "./components/SettingsModal";
 import PromptLibraryModal from "./components/PromptLibraryModal";
 import Login from "./components/Login";
 import { setSidebarOpen } from "./store/uiSlice";
+<<<<<<< HEAD
 import { loadUserConversations } from "./store/chatSlice";
+=======
+import { fetchChats } from "./store/chatSlice";
+>>>>>>> 23c19ea2dc1f4a0130a5ce91cc3250ed8930c0a8
 
 function App() {
   const dispatch = useDispatch();
@@ -22,6 +26,12 @@ function App() {
       dispatch(loadUserConversations(user.email));
     }
   }, [user, dispatch]);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      dispatch(fetchChats());
+    }
+  }, [isAuthenticated, dispatch]);
 
   useEffect(() => {
     if (theme === "dark") {
@@ -65,7 +75,10 @@ function App() {
 
       {/* Prompt Library Modal */}
       <PromptLibraryModal />
+<<<<<<< HEAD
 
+=======
+>>>>>>> 23c19ea2dc1f4a0130a5ce91cc3250ed8930c0a8
     </div>
   );
 }
