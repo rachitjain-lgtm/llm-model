@@ -1,24 +1,3 @@
-<<<<<<< HEAD
-// Mock API for chat actions with simulated streaming
-export const chatApi = {
-  sendMessageStream: (chatId, text, model, useKnowledgeBase, onChunk, onDone) => {
-    const responseText = `I have received your request: "${text}". 
-
-> **Note:** LLM model backend is not integrated yet. Running in demonstration mode using **${model}**.
-
-As an AI Assistant using **${model}**, I can coordinate this request against connected resources, query your selected databases, or execute analytical models.
-
-Let me know if you would like me to compile code, perform a semantic search in your knowledge base, or test custom safety guardrail policy limits for this input.`;
-
-    let sources = null;
-    if (useKnowledgeBase) {
-      sources = [
-        {
-          title: "Product Documentation",
-          url: "https://example.com/knowledge-bases/"
-        }
-      ];
-=======
 import axiosClient from "./axiosClient";
 
 const streamText = (text, streamingOn, onChunk, onDone) => {
@@ -37,7 +16,6 @@ const streamText = (text, streamingOn, onChunk, onDone) => {
       clearInterval(interval);
       onDone(currentText);
       return;
->>>>>>> 23c19ea2dc1f4a0130a5ce91cc3250ed8930c0a8
     }
 
     currentText += tokens[index];
@@ -49,22 +27,22 @@ const streamText = (text, streamingOn, onChunk, onDone) => {
 export const chatApi = {
   fetchUserChats: async () => {
     const res = await axiosClient.get("/chats");
-    return res.data.data;
+    return res.data.data || res.data.chats || res.data;
   },
 
   createChat: async (chatData) => {
     const res = await axiosClient.post("/chats", chatData);
-    return res.data.data;
+    return res.data.data || res.data.chat || res.data;
   },
 
   renameChat: async (chatId, title) => {
     const res = await axiosClient.put(`/chats/${chatId}/title`, { title });
-    return res.data.data;
+    return res.data.data || res.data.chat || res.data;
   },
 
   updateSettings: async (chatId, settings) => {
     const res = await axiosClient.put(`/chats/${chatId}/settings`, settings);
-    return res.data.data;
+    return res.data.data || res.data.chat || res.data;
   },
 
   deleteChat: async (chatId) => {
@@ -74,7 +52,7 @@ export const chatApi = {
 
   saveMessage: async (chatId, messageData) => {
     const res = await axiosClient.post(`/chats/${chatId}/messages`, messageData);
-    return res.data.data;
+    return res.data.data || res.data.message || res.data;
   },
 
   sendMessageStream: async ({
@@ -88,13 +66,11 @@ export const chatApi = {
       model: conversation.model,
       temperature: conversation.temperature,
       maxTokens: conversation.maxTokens,
-      useGuardrails: conversation.useGuardrails,
-      useKnowledgeBase: conversation.useKnowledgeBase,
-      activeKbTitle: activeKb?.title || ""
     });
 
-    const finalText = response.data?.data?.text || "The model returned an empty response.";
-    const sources = response.data?.data?.sources || null;
+    const payload = response.data?.data || response.data;
+    const finalText = payload?.text || "The model returned an empty response.";
+    const sources = payload?.sources || null;
     streamText(finalText, streamingOn, onChunk, (streamedText) => onDone(streamedText, sources));
   }
 };

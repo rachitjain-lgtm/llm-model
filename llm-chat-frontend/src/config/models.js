@@ -1,5 +1,15 @@
 export const MODEL_OPTIONS = [
   {
+    id: "deepseek/deepseek-r1",
+    label: "DeepSeek R1",
+    provider: "OpenRouter"
+  },
+  {
+    id: "deepseek/deepseek-chat",
+    label: "DeepSeek V3",
+    provider: "OpenRouter"
+  },
+  {
     id: "google/gemini-2.5-flash",
     label: "Gemini 2.5 Flash",
     provider: "OpenRouter"
@@ -26,8 +36,11 @@ export const MODEL_OPTIONS = [
   }
 ];
 
-export const DEFAULT_MODEL_ID = MODEL_OPTIONS[0].id;
+export const DEFAULT_MODEL_ID = "deepseek/deepseek-r1";
 
 export function getModelLabel(modelId) {
+  if (!modelId || modelId === "Claude 3 Sonnet" || modelId.includes("Claude")) {
+    return "DeepSeek R1";
+  }
   return MODEL_OPTIONS.find((model) => model.id === modelId)?.label || modelId;
 }

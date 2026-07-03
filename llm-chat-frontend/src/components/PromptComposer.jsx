@@ -6,13 +6,16 @@ import {
   Shield, 
   BookOpen, 
   Send, 
+  SlidersHorizontal,
   Check,
   Search,
   X,
   FileText,
   Image as ImageIcon,
   FileCode,
-  File
+  File,
+  Mic,
+  MicOff
 } from "lucide-react";
 import { 
   addMessage, 
@@ -23,14 +26,11 @@ import {
   renameChat
 } from "../store/chatSlice";
 import { 
+  toggleRightPanel, 
   setActiveKbId, 
   toggleKbDropdown, 
   setKbDropdownOpen,
-<<<<<<< HEAD
-  togglePromptLibraryModal
-=======
   setPromptLibraryModalOpen 
->>>>>>> 23c19ea2dc1f4a0130a5ce91cc3250ed8930c0a8
 } from "../store/uiSlice";
 import { chatApi } from "../api/chatApi";
 import { getModelLabel } from "../config/models";
@@ -49,7 +49,64 @@ export default function PromptComposer() {
   const conversations = useSelector(state => state.chat.conversations);
   const activeChat = conversations.find(c => c.id === activeId);
   const isLoading = useSelector(state => state.chat.isLoading);
-  const streamingOn = useSelector(state => state.chat.streamingOn);
+  const streamingOn = true;
+
+  const [isListening, setIsListening] = useState(false);
+  const recognitionRef = useRef(null);
+  const baseTextRef = useRef("");
+
+  const toggleVoiceInput = () => {
+    if (isListening) {
+      recognitionRef.current?.stop();
+      setIsListening(false);
+      return;
+    }
+
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert("Speech recognition is not supported in your browser. Please try Chrome, Edge, or Safari.");
+      return;
+    }
+
+    baseTextRef.current = inputText;
+
+    const recognition = new SpeechRecognition();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = "en-US";
+
+    recognition.onresult = (event) => {
+      let finalTranscript = "";
+      let interimTranscript = "";
+
+      for (let i = 0; i < event.results.length; i++) {
+        const transcript = event.results[i][0].transcript;
+        if (event.results[i].isFinal) {
+          finalTranscript += transcript + " ";
+        } else {
+          interimTranscript += transcript;
+        }
+      }
+
+      const base = baseTextRef.current ? baseTextRef.current.trim() : "";
+      const spoken = (finalTranscript + interimTranscript).trim();
+      const combined = base ? `${base} ${spoken}` : spoken;
+      setInputText(combined);
+    };
+
+    recognition.onerror = (event) => {
+      console.error("Speech recognition error:", event.error);
+      setIsListening(false);
+    };
+
+    recognition.onend = () => {
+      setIsListening(false);
+    };
+
+    recognition.start();
+    recognitionRef.current = recognition;
+    setIsListening(true);
+  };
 
   const kbDropdownOpen = useSelector(state => state.ui.kbDropdownOpen);
   const activeKbId = useSelector(state => state.ui.activeKbId);
@@ -372,95 +429,24 @@ If you're using a free model, double-check that the model ID is still available 
               )}
             </button>
 
-            {/* Knowledge Base selector trigger */}
-            <div className="relative" ref={kbRef}>
-              <button 
-                onClick={() => dispatch(toggleKbDropdown())}
-                className={`h-9 px-3 rounded-xl flex items-center gap-2 text-[11px] font-semibold transition-all cursor-pointer border
-                  ${activeChat.useKnowledgeBase 
-                    ? "bg-[#E7F3F1] dark:bg-[#183331] border-[#245955]/20 dark:border-[#347d78]/30 text-[#245955] dark:text-[#347d78] hover:bg-[#d5ebe7] dark:hover:bg-[#204441]" 
-                    : "bg-transparent border-transparent hover:bg-[#FAFAFA] dark:hover:bg-[#23272A] text-[#737373] dark:text-[#94A3B8] hover:text-[#171717] dark:hover:text-[#eceff1]"}`}
-              >
-                <Database size={14} />
-                <span>
-                  {activeChat.useKnowledgeBase && activeKb 
-                    ? activeKb.title 
-                    : "Knowledge Base"}
-                </span>
-              </button>
-
-              {/* KB Selector Dropdown Card */}
-              {kbDropdownOpen && (
-                <div className="absolute left-0 bottom-full mb-2 w-72 bg-white dark:bg-[#1E2326] border border-[#E7E7E7] dark:border-[#23272A] rounded-xl shadow-lg p-3 z-50 transition-colors">
-                  <div className="text-xs font-bold text-[#171717] dark:text-[#eceff1] pb-2 font-montserrat transition-colors">Knowledge Base</div>
-                  
-                  {/* Search in KB */}
-                  <div className="relative mb-2">
-                    <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#737373] dark:text-[#94A3B8]" />
-                    <input 
-                      type="text"
-                      placeholder="Search knowledge bases"
-                      value={kbSearch}
-                      onChange={(e) => setKbSearch(e.target.value)}
-                      className="w-full h-8 bg-[#F5F7F7] dark:bg-[#0f1214] border border-[#E7E7E7] dark:border-[#23272A] text-[#171717] dark:text-[#eceff1] rounded-lg pl-8 pr-3 text-[10px] placeholder-[#A3A3A3] dark:placeholder-[#64748B] focus:outline-none transition-colors"
-                    />
-                  </div>
-
-                  <div className="space-y-1 max-h-48 overflow-y-auto">
-                    {filteredKbs.map((kb) => (
-                      <div 
-                        key={kb.id}
-                        onClick={() => {
-                          dispatch(setActiveKbId(kb.id));
-                          dispatch(updateChatSettings({ id: activeChat.id, key: "useKnowledgeBase", value: true }));
-                          dispatch(setKbDropdownOpen(false));
-                        }}
-                        className={`flex items-center justify-between p-2 rounded-lg cursor-pointer transition-colors border
-                          ${activeKbId === kb.id && activeChat.useKnowledgeBase
-                            ? "bg-[#E7F3F1] dark:bg-[#183331] border-[#245955]/20 dark:border-[#347d78]/30 text-[#245955] dark:text-[#347d78]" 
-                            : "bg-transparent border-transparent hover:bg-[#FAFAFA] dark:hover:bg-[#23272A] text-[#737373] dark:text-[#94A3B8]"}`}
-                      >
-                        <div>
-                          <div className="text-[11px] font-semibold">{kb.title}</div>
-                          <div className="text-[9px] text-[#A3A3A3] dark:text-[#64748B] mt-0.5">{kb.detail}</div>
-                        </div>
-                        {activeKbId === kb.id && activeChat.useKnowledgeBase && (
-                          <div className="w-4 h-4 rounded-full bg-[#245955] dark:bg-[#347d78] flex items-center justify-center text-white">
-                            <Check size={10} />
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="border-t border-[#E7E7E7] dark:border-[#23272A] mt-2 pt-2 text-center">
-                    <button className="text-[10px] font-bold text-[#245955] dark:text-[#347d78] hover:text-[#1d4643] dark:hover:text-[#2b6763] cursor-pointer">
-                      Manage knowledge bases
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Guardrails toggle */}
+            {/* Voice Input Microphone Button */}
             <button 
-              onClick={() => dispatch(updateChatSettings({ id: activeChat.id, key: "useGuardrails", value: !activeChat.useGuardrails }))}
-              className={`h-9 px-3 rounded-xl flex items-center gap-2 text-[11px] font-semibold transition-all cursor-pointer border
-                ${activeChat.useGuardrails 
-                  ? "bg-[#E7F3F1] dark:bg-[#183331] border-[#245955]/20 dark:border-[#347d78]/30 text-[#245955] dark:text-[#347d78] hover:bg-[#d5ebe7] dark:hover:bg-[#204441]" 
-                  : "bg-transparent border-transparent hover:bg-[#FAFAFA] dark:hover:bg-[#23272A] text-[#737373] dark:text-[#94A3B8] hover:text-[#171717] dark:hover:text-[#eceff1]"}`}
+              type="button"
+              onClick={toggleVoiceInput}
+              className={`h-9 px-3 rounded-xl flex items-center gap-2 text-[11px] font-semibold transition-all cursor-pointer border ${
+                isListening 
+                  ? "bg-rose-500 text-white border-rose-600 animate-pulse shadow-md" 
+                  : "bg-transparent border-transparent hover:bg-[#FAFAFA] dark:hover:bg-[#23272A] text-[#737373] dark:text-[#94A3B8] hover:text-[#171717] dark:hover:text-[#eceff1]"
+              }`}
+              title={isListening ? "Listening... Click to stop" : "Start Voice Input"}
             >
-              <Shield size={14} />
-              <span>Guardrails</span>
+              {isListening ? <MicOff size={14} className="text-white" /> : <Mic size={14} />}
+              <span>{isListening ? "Listening..." : "Voice Input"}</span>
             </button>
 
             {/* Prompt Library */}
             <button 
-<<<<<<< HEAD
-              onClick={() => dispatch(togglePromptLibraryModal())}
-=======
               onClick={() => dispatch(setPromptLibraryModalOpen(true))}
->>>>>>> 23c19ea2dc1f4a0130a5ce91cc3250ed8930c0a8
               className="h-9 px-3 hover:bg-[#FAFAFA] dark:hover:bg-[#23272A] border border-transparent hover:border-[#E7E7E7] dark:border-[#23272A] rounded-xl flex items-center gap-2 text-[11px] font-semibold text-[#737373] dark:text-[#94A3B8] hover:text-[#171717] dark:hover:text-[#eceff1] transition-all cursor-pointer"
             >
               <BookOpen size={14} />

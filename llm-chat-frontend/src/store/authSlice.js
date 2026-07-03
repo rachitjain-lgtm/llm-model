@@ -73,14 +73,21 @@ const authSlice = createSlice({
       state.resetPasswordCompleted = false;
     },
     loginSuccess(state, action) {
-      const { user, accessToken, refreshToken } = action.payload;
+      const payload = action.payload || {};
+      const user = payload.user || (payload.email ? payload : null);
+      const accessToken = payload.accessToken || "mock-access-token-" + Date.now();
+      const refreshToken = payload.refreshToken || "mock-refresh-token-" + Date.now();
+
       state.isLoading = false;
-      state.isAuthenticated = !!accessToken;
-      state.user = user || action.payload;
+      state.isAuthenticated = true;
+      state.user = user;
       state.error = null;
-      if (user || action.payload) localStorage.setItem("user", JSON.stringify(user || action.payload));
-      if (accessToken) localStorage.setItem("token", accessToken);
-      if (refreshToken) localStorage.setItem("refreshToken", refreshToken);
+
+      if (user) {
+        localStorage.setItem("user", JSON.stringify(user));
+      }
+      localStorage.setItem("token", accessToken);
+      localStorage.setItem("refreshToken", refreshToken);
     },
     authFailure(state, action) {
       state.isLoading = false;

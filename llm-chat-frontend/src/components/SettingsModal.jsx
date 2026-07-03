@@ -1,11 +1,6 @@
-<<<<<<< HEAD
 import React, { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { X, Sun, Moon, Laptop, ShieldCheck, Cpu, Trash2, CheckCircle2 } from "lucide-react";
-=======
-import { useDispatch, useSelector } from "react-redux";
-import { X, Sun, Moon, ShieldCheck, Cpu } from "lucide-react";
->>>>>>> 23c19ea2dc1f4a0130a5ce91cc3250ed8930c0a8
 import { setSettingsModalOpen, setTheme } from "../store/uiSlice";
 import { clearActiveChat } from "../store/chatSlice";
 
@@ -13,16 +8,13 @@ export default function SettingsModal() {
   const dispatch = useDispatch();
   const settingsModalOpen = useSelector((state) => state.ui.settingsModalOpen);
   const theme = useSelector((state) => state.ui.theme);
-<<<<<<< HEAD
   const activeId = useSelector((state) => state.chat.activeConversationId);
   const conversations = useSelector((state) => state.chat.conversations);
   const activeChat = conversations.find((c) => c.id === activeId);
+  const providerName = useSelector((state) => state.ui.providerName);
 
   const [confirmClear, setConfirmClear] = useState(false);
   const [clearedSuccess, setClearedSuccess] = useState(false);
-=======
-  const providerName = useSelector((state) => state.ui.providerName);
->>>>>>> 23c19ea2dc1f4a0130a5ce91cc3250ed8930c0a8
 
   if (!settingsModalOpen) return null;
 
@@ -90,7 +82,6 @@ export default function SettingsModal() {
             </div>
           </div>
 
-<<<<<<< HEAD
           {/* Opened Conversation Management */}
           <div className="space-y-3">
             <label className="text-[11px] font-semibold text-[#737373] dark:text-[#94A3B8] uppercase tracking-wider block">
@@ -138,8 +129,6 @@ export default function SettingsModal() {
             </div>
           </div>
 
-          {/* Connection Status & Infrastructure details */}
-=======
           <div className="space-y-2">
             <label className="text-[11px] font-semibold text-[#737373] dark:text-[#94A3B8] uppercase tracking-wider block">
               Model API
@@ -162,7 +151,6 @@ export default function SettingsModal() {
             </div>
           </div>
 
->>>>>>> 23c19ea2dc1f4a0130a5ce91cc3250ed8930c0a8
           <div className="space-y-3">
             <label className="text-[11px] font-semibold text-[#737373] dark:text-[#94A3B8] uppercase tracking-wider block">
               Infrastructure Status

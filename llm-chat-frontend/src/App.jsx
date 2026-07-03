@@ -8,11 +8,7 @@ import SettingsModal from "./components/SettingsModal";
 import PromptLibraryModal from "./components/PromptLibraryModal";
 import Login from "./components/Login";
 import { setSidebarOpen } from "./store/uiSlice";
-<<<<<<< HEAD
-import { loadUserConversations } from "./store/chatSlice";
-=======
 import { fetchChats } from "./store/chatSlice";
->>>>>>> 23c19ea2dc1f4a0130a5ce91cc3250ed8930c0a8
 
 function App() {
   const dispatch = useDispatch();
@@ -20,12 +16,6 @@ function App() {
   const theme = useSelector((state) => state.ui.theme);
   const isAuthenticated = useSelector((state) => state.auth.isAuthenticated);
   const user = useSelector((state) => state.auth.user);
-
-  useEffect(() => {
-    if (user && user.email) {
-      dispatch(loadUserConversations(user.email));
-    }
-  }, [user, dispatch]);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -75,10 +65,7 @@ function App() {
 
       {/* Prompt Library Modal */}
       <PromptLibraryModal />
-<<<<<<< HEAD
 
-=======
->>>>>>> 23c19ea2dc1f4a0130a5ce91cc3250ed8930c0a8
     </div>
   );
 }

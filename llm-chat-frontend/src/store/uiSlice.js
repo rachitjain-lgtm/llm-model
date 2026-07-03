@@ -53,15 +53,13 @@ const initialState = {
   activeKbId: "kb-3e7f2a1",
   theme: typeof window !== "undefined" ? (localStorage.getItem("theme") || "light") : "light",
   settingsModalOpen: false,
-<<<<<<< HEAD
-  promptLibraryModalOpen: false
-=======
   promptLibraryModalOpen: false,
   apiKey: storedApiSettings.apiKey,
   appName: storedApiSettings.appName,
   providerName: storedApiSettings.providerName,
-  apiBaseUrl: storedApiSettings.apiBaseUrl
->>>>>>> 23c19ea2dc1f4a0130a5ce91cc3250ed8930c0a8
+  apiBaseUrl: storedApiSettings.apiBaseUrl,
+  rightPanelOpen: false,
+  regionDropdownOpen: false
 };
 
 const uiSlice = createSlice({
@@ -109,8 +107,6 @@ const uiSlice = createSlice({
     },
     setPromptLibraryModalOpen(state, action) {
       state.promptLibraryModalOpen = action.payload;
-<<<<<<< HEAD
-=======
     },
     setApiKey(state, action) {
       state.apiKey = action.payload;
@@ -119,7 +115,18 @@ const uiSlice = createSlice({
     setAppName(state, action) {
       state.appName = action.payload;
       persistApiSettings(state);
->>>>>>> 23c19ea2dc1f4a0130a5ce91cc3250ed8930c0a8
+    },
+    toggleRightPanel(state) {
+      state.rightPanelOpen = !state.rightPanelOpen;
+    },
+    setRightPanelOpen(state, action) {
+      state.rightPanelOpen = action.payload;
+    },
+    toggleRegionDropdown(state) {
+      state.regionDropdownOpen = !state.regionDropdownOpen;
+    },
+    setRegionDropdownOpen(state, action) {
+      state.regionDropdownOpen = action.payload;
     }
   }
 });
@@ -136,14 +143,13 @@ export const {
   setTheme,
   toggleSettingsModal,
   setSettingsModalOpen,
-  togglePromptLibraryModal,
-<<<<<<< HEAD
-  setPromptLibraryModalOpen
-=======
   setPromptLibraryModalOpen,
   setApiKey,
-  setAppName
->>>>>>> 23c19ea2dc1f4a0130a5ce91cc3250ed8930c0a8
+  setAppName,
+  toggleRightPanel,
+  setRightPanelOpen,
+  toggleRegionDropdown,
+  setRegionDropdownOpen
 } = uiSlice.actions;
 
 export default uiSlice.reducer;

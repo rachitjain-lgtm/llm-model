@@ -35,23 +35,14 @@ export default function Sidebar() {
   const [editingId, setEditingId] = useState(null);
   const [editTitle, setEditTitle] = useState("");
 
-<<<<<<< HEAD
   const handleCreateChat = (e) => {
     if (e) e.stopPropagation();
-    dispatch(createNewChat());
+    dispatch(createChatAsync({ title: "New Conversation" }));
   };
 
   const handleSelectChat = (e, id) => {
     if (e) e.stopPropagation();
-    dispatch(setActiveConversation(id));
-=======
-  const handleCreateChat = () => {
-    dispatch(createChatAsync({ title: "New Conversation" }));
-  };
-
-  const handleSelectChat = (id) => {
     dispatch(syncActiveConversation(id));
->>>>>>> 23c19ea2dc1f4a0130a5ce91cc3250ed8930c0a8
   };
 
   const handleDeleteChat = (e, id) => {
@@ -124,7 +115,6 @@ export default function Sidebar() {
             </button>
           </div>
 
-<<<<<<< HEAD
           {/* New Chat Button */}
           <div className="px-5 py-2">
             <button 
@@ -148,17 +138,6 @@ export default function Sidebar() {
                 onClick={(e) => e.stopPropagation()}
                 className="w-full h-10 bg-[#262626] border border-[#2c2c2c] rounded-lg pl-10 pr-4 text-xs placeholder-[#737373] text-white focus:outline-none focus:border-[#245955] transition-colors"
               />
-=======
-        {/* Workspace Card */}
-        <div className="flex items-center justify-between p-2.5 rounded-lg hover:bg-[#262626] cursor-pointer transition-colors">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-8 h-8 rounded-lg bg-[#262626] flex items-center justify-center text-[#737373]">
-              <Building size={16} />
-            </div>
-            <div className="min-w-0">
-              <div className="text-xs font-semibold truncate">Enterprise Workspace</div>
-              <div className="text-[10px] text-[#737373] truncate">BYOK • OpenRouter • free models</div>
->>>>>>> 23c19ea2dc1f4a0130a5ce91cc3250ed8930c0a8
             </div>
           </div>
 

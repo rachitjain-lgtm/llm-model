@@ -74,6 +74,13 @@ const persistState = (state) => {
   localStorage.setItem("chat_active_conversation_id", state.activeConversationId || "");
 };
 
+const saveState = (state) => {
+  persistState(state);
+  if (state.currentUserEmail) {
+    saveUserConversations(state.currentUserEmail, state.conversations);
+  }
+};
+
 const storedConversations = getStoredConversations();
 const storedActiveConversationId = typeof window !== "undefined"
   ? localStorage.getItem("chat_active_conversation_id")
@@ -124,41 +131,32 @@ const initialEmail = getInitialUserEmail();
 const initialConversations = getUserConversations(initialEmail);
 
 const initialState = {
-<<<<<<< HEAD
-  conversations: initialConversations,
-  activeConversationId: initialConversations.length > 0 ? initialConversations[0].id : null,
-  searchQuery: "",
-  isLoading: false,
-  currentUserEmail: initialEmail
-=======
   conversations: storedConversations || [],
   activeConversationId: storedActiveConversationId || null,
   searchQuery: "",
   streamingOn: true,
   isLoading: false,
-  error: null
->>>>>>> 23c19ea2dc1f4a0130a5ce91cc3250ed8930c0a8
+  error: null,
+  currentUserEmail: initialEmail
 };
 
 const chatSlice = createSlice({
   name: "chat",
   initialState,
   reducers: {
-<<<<<<< HEAD
     loadUserConversations(state, action) {
       const email = action.payload;
       state.currentUserEmail = email;
       const userConvs = getUserConversations(email);
       state.conversations = userConvs;
       state.activeConversationId = userConvs.length > 0 ? userConvs[0].id : null;
-=======
+    },
     setConversations(state, action) {
       state.conversations = action.payload;
       if (action.payload.length > 0 && !state.activeConversationId) {
         state.activeConversationId = action.payload[0].id;
       }
-      persistState(state);
->>>>>>> 23c19ea2dc1f4a0130a5ce91cc3250ed8930c0a8
+      saveState(state);
     },
     setActiveConversation(state, action) {
       state.activeConversationId = action.payload;
@@ -168,18 +166,11 @@ const chatSlice = createSlice({
       const id = `chat-${Date.now()}`;
       const newChat = {
         id,
-<<<<<<< HEAD
-        title: "New Conversation",
-        timestamp: "Today, " + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        model: "Claude 3 Sonnet",
-        provider: "Cloud AI",
-=======
         title: "New chat",
         timestamp: "Today, " + new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
         model: DEFAULT_MODEL_ID,
         provider: "OpenRouter",
         region: "global",
->>>>>>> 23c19ea2dc1f4a0130a5ce91cc3250ed8930c0a8
         temperature: 0.7,
         maxTokens: 4096,
         useKnowledgeBase: false,
@@ -188,33 +179,21 @@ const chatSlice = createSlice({
       };
       state.conversations.unshift(newChat);
       state.activeConversationId = id;
-<<<<<<< HEAD
-      saveUserConversations(state.currentUserEmail, state.conversations);
-=======
-      persistState(state);
->>>>>>> 23c19ea2dc1f4a0130a5ce91cc3250ed8930c0a8
+      saveState(state);
     },
     deleteChat(state, action) {
       state.conversations = state.conversations.filter((conversation) => conversation.id !== action.payload);
       if (state.activeConversationId === action.payload) {
         state.activeConversationId = state.conversations[0]?.id || null;
       }
-<<<<<<< HEAD
-      saveUserConversations(state.currentUserEmail, state.conversations);
-=======
-      persistState(state);
->>>>>>> 23c19ea2dc1f4a0130a5ce91cc3250ed8930c0a8
+      saveState(state);
     },
     renameChat(state, action) {
       const { id, title } = action.payload;
       const chat = state.conversations.find((conversation) => conversation.id === id);
       if (chat) {
         chat.title = title;
-<<<<<<< HEAD
-        saveUserConversations(state.currentUserEmail, state.conversations);
-=======
-        persistState(state);
->>>>>>> 23c19ea2dc1f4a0130a5ce91cc3250ed8930c0a8
+        saveState(state);
       }
     },
     updateChatSettings(state, action) {
@@ -222,11 +201,7 @@ const chatSlice = createSlice({
       const chat = state.conversations.find((conversation) => conversation.id === id);
       if (chat) {
         chat[key] = value;
-<<<<<<< HEAD
-        saveUserConversations(state.currentUserEmail, state.conversations);
-=======
-        persistState(state);
->>>>>>> 23c19ea2dc1f4a0130a5ce91cc3250ed8930c0a8
+        saveState(state);
       }
     },
     setSearchQuery(state, action) {
@@ -240,11 +215,7 @@ const chatSlice = createSlice({
       const chat = state.conversations.find((conversation) => conversation.id === chatId);
       if (chat) {
         chat.messages.push(message);
-<<<<<<< HEAD
-        saveUserConversations(state.currentUserEmail, state.conversations);
-=======
-        persistState(state);
->>>>>>> 23c19ea2dc1f4a0130a5ce91cc3250ed8930c0a8
+        saveState(state);
       }
     },
     updateLastMessageText(state, action) {
@@ -254,11 +225,7 @@ const chatSlice = createSlice({
         const lastMsg = chat.messages[chat.messages.length - 1];
         if (lastMsg.sender === "assistant") {
           lastMsg.text = text;
-<<<<<<< HEAD
-          saveUserConversations(state.currentUserEmail, state.conversations);
-=======
-          persistState(state);
->>>>>>> 23c19ea2dc1f4a0130a5ce91cc3250ed8930c0a8
+          saveState(state);
         }
       }
     },
@@ -270,8 +237,7 @@ const chatSlice = createSlice({
         if (lastMsg.sender === "assistant") {
           if (!lastMsg.sources) lastMsg.sources = [];
           lastMsg.sources.push(source);
-<<<<<<< HEAD
-          saveUserConversations(state.currentUserEmail, state.conversations);
+          saveState(state);
         }
       }
     },
@@ -280,7 +246,7 @@ const chatSlice = createSlice({
       const chat = state.conversations.find(c => c.id === state.activeConversationId);
       if (chat) {
         chat.messages = [];
-        saveUserConversations(state.currentUserEmail, state.conversations);
+        saveState(state);
       }
     },
     editMessage(state, action) {
@@ -290,10 +256,7 @@ const chatSlice = createSlice({
         const msg = chat.messages.find(m => m.id === messageId);
         if (msg) {
           msg.text = newText;
-          saveUserConversations(state.currentUserEmail, state.conversations);
-=======
-          persistState(state);
->>>>>>> 23c19ea2dc1f4a0130a5ce91cc3250ed8930c0a8
+          saveState(state);
         }
       }
     },
@@ -354,11 +317,8 @@ const chatSlice = createSlice({
 });
 
 export const {
-<<<<<<< HEAD
   loadUserConversations,
-=======
   setConversations,
->>>>>>> 23c19ea2dc1f4a0130a5ce91cc3250ed8930c0a8
   setActiveConversation,
   createNewChat,
   deleteChat,
@@ -369,12 +329,9 @@ export const {
   addMessage,
   updateLastMessageText,
   addSourceToLastMessage,
-<<<<<<< HEAD
   clearActiveChat,
-  editMessage
-=======
+  editMessage,
   syncActiveConversation
->>>>>>> 23c19ea2dc1f4a0130a5ce91cc3250ed8930c0a8
 } = chatSlice.actions;
 
 export default chatSlice.reducer;
