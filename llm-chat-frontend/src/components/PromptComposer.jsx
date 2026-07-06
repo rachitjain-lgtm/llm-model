@@ -26,6 +26,7 @@ import {
   setLoading, 
   updateLastMessageText, 
   addSourceToLastMessage,
+  addImageUrlToLastMessage,
   setLastMessageSources,
   updateChatSettings,
   renameChat,
@@ -38,8 +39,9 @@ import {
   setKbDropdownOpen,
   setPromptLibraryModalOpen 
 } from "../store/uiSlice";
-import { chatApi } from "../api/chatApi";
 import { getModelLabel } from "../config/models";
+import { generateImage } from "../api/generateApi";
+import { chatApi } from "../api/chatApi";
 
 const createMessageId = (suffix) => {
   if (globalThis.crypto?.randomUUID) {
@@ -282,19 +284,6 @@ export default function PromptComposer() {
     // 2. Set loading state
     dispatch(setLoading(true));
 
-    // 3. Add blank assistant bubble to stream into
-    const assistantMsgId = createMessageId("assistant");
-    dispatch(addMessage({
-      chatId: activeChat.id,
-      message: {
-        id: assistantMsgId,
-        sender: "assistant",
-        text: "",
-        time: timeStr,
-        sources: null
-      }
-    }));
-
     // Construct prompt sent to API including attachment names and text contents
     let fullPrompt = userMessageText;
     if (currentAttachments.length > 0) {
@@ -307,6 +296,117 @@ export default function PromptComposer() {
       }).join("\n\n");
       fullPrompt = userMessageText ? `${userMessageText}\n\n${fileListStr}` : fileListStr;
     }
+
+    // Robust detector for Image Generation intents (e.g. "draw a puppy", "generate an image", "create a picture of...")
+    const detectImageIntent = (text) => {
+      if (!text) return false;
+      const clean = text.toLowerCase();
+      const verbs = ["generate", "create", "draw", "paint", "sketch", "render", "make", "produce", "design", "show me"];
+      const nouns = ["image", "picture", "photo", "photograph", "illustration", "painting", "drawing", "sketch", "graphic", "artwork", "visual", "clipart"];
+      
+      // If we see combinations like: "verb ... noun"
+      for (const verb of verbs) {
+        for (const noun of nouns) {
+          if (clean.includes(verb) && clean.includes(noun)) {
+            return true;
+          }
+        }
+      }
+      
+      // Match phrases like "draw a...", "paint a...", "sketch a..."
+      if (/\b(draw|paint|sketch|render|create\s+a\s+visual\s+of)\s+(an?\s+)/i.test(clean)) {
+        // Leave flowcharts, diagrams, graphs to the LLM (which outputs Mermaid/ReactFlow code)
+        if (clean.includes("flowchart") || clean.includes("diagram") || clean.includes("graph") || clean.includes("chart")) {
+          return false;
+        }
+        return true;
+      }
+      
+      // Match patterns like "image of ...", "picture of ...", "photo of ..."
+      if (/\b(image|picture|photo|photograph|illustration|painting|sketch|drawing|graphic)\s+of\b/i.test(clean)) {
+        return true;
+      }
+      
+      return false;
+    };
+
+    const isImagePrompt = detectImageIntent(userMessageText);
+
+    if (isImagePrompt) {
+      // Save user message to database
+      chatApi.saveMessage(activeChat.id, {
+        sender: "user",
+        content: userMessageText
+      }).catch((err) => console.error("Failed to save user message to DB:", err));
+
+      // Add a single assistant bubble with loading text
+      const imageMsgId = createMessageId("assistant");
+      dispatch(addMessage({
+        chatId: activeChat.id,
+        message: {
+          id: imageMsgId,
+          sender: "assistant",
+          text: "🎨 Generating your image using Google Imagen 3...",
+          time: timeStr,
+          sources: null
+        }
+      }));
+
+      try {
+        // Call the generation API
+        const result = await generateImage(userMessageText);
+        const { imageUrl, isSvg, svgContent } = result;
+
+        // Update the assistant bubble with success message
+        dispatch(updateLastMessageText({ 
+          chatId: activeChat.id, 
+          text: isSvg
+            ? `Here is the SVG illustration I created for: *"${userMessageText}"*`
+            : `Here is the image I created for: *"${userMessageText}"*`
+        }));
+        
+        // Add the image url to the message (isSvg flag tells MessageBubble how to render)
+        dispatch(addImageUrlToLastMessage({
+          chatId: activeChat.id,
+          imageUrl: imageUrl,
+          isSvg,
+          svgContent: svgContent || null,
+        }));
+
+        // Save assistant response to database
+        chatApi.saveMessage(activeChat.id, {
+          sender: "assistant",
+          content: isSvg
+            ? `Here is the SVG illustration I created for: *"${userMessageText}"*`
+            : `Here is the image I created for: *"${userMessageText}"*`,
+          imageUrl: imageUrl
+        }).catch((err) => console.error("Failed to save assistant message to DB:", err));
+
+        dispatch(setLoading(false));
+        return;
+      } catch (error) {
+        console.error("Image generation failed:", error);
+        dispatch(updateLastMessageText({
+          chatId: activeChat.id,
+          text: `❌ Image generation failed: ${error.message || "Unknown error occurred"}.`
+        }));
+        dispatch(setLoading(false));
+        return;
+      }
+    }
+
+    // 3. Add blank assistant bubble to stream text into (only for non-image prompts)
+    const assistantMsgId = createMessageId("assistant");
+    dispatch(addMessage({
+      chatId: activeChat.id,
+      message: {
+        id: assistantMsgId,
+        sender: "assistant",
+        text: "",
+        time: timeStr,
+        sources: null
+      }
+    }));
 
     const controller = new AbortController();
     abortControllerRef.current = controller;

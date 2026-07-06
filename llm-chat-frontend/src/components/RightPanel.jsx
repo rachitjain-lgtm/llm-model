@@ -74,8 +74,6 @@ export default function RightPanel() {
           </div>
         </div>
 
-        </div>
-
         {/* Temperature Slider */}
         <div className="space-y-1.5">
           <div className="flex items-center justify-between">

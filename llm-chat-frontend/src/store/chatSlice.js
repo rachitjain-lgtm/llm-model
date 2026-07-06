@@ -244,6 +244,19 @@ const chatSlice = createSlice({
         }
       }
     },
+    addImageUrlToLastMessage(state, action) {
+      const { chatId, imageUrl, isSvg, svgContent } = action.payload;
+      const chat = state.conversations.find((conversation) => conversation.id === chatId);
+      if (chat && chat.messages.length > 0) {
+        const lastMsg = chat.messages[chat.messages.length - 1];
+        if (lastMsg.sender === "assistant") {
+          lastMsg.imageUrl = imageUrl;
+          lastMsg.isSvg = isSvg || false;
+          lastMsg.svgContent = svgContent || null;
+          saveState(state);
+        }
+      }
+    },
     setLastMessageSources(state, action) {
       const { chatId, sources } = action.payload;
       const chat = state.conversations.find((conversation) => conversation.id === chatId);
@@ -350,6 +363,7 @@ export const {
   addMessage,
   updateLastMessageText,
   addSourceToLastMessage,
+  addImageUrlToLastMessage,
   setLastMessageSources,
   clearActiveChat,
   editMessage,

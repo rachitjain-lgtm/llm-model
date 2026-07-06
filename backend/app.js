@@ -21,6 +21,10 @@ app.use('/api/auth', authRoutes);
 const chatRoutes = require('./routes/chat.routes');
 app.use('/api/chats', chatRoutes);
 
+// Generate Routes (PDF, DOCX, PPTX, XLSX, Image)
+const generateRoutes = require('./routes/generate.routes');
+app.use('/api/generate', generateRoutes);
+
 // Basic Error Handler
 app.use((err, req, res, next) => {
   console.error(err.stack);
