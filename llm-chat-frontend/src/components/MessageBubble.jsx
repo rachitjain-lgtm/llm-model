@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect, lazy, Suspense } from "react";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
 import { 
@@ -15,17 +15,65 @@ import {
   Edit2,
   Volume2,
   VolumeX,
-  RotateCcw
+  RotateCcw,
+  Download,
+  ChevronDown,
+  FileSpreadsheet,
+  Presentation,
+  Loader,
+  Pencil
 } from "lucide-react";
+import { downloadPDF, downloadDOCX, downloadPPTX, downloadXLSX } from "../api/generateApi";
+
+const MermaidBlock = lazy(() => import("./MermaidBlock"));
+const ReactFlowBlock = lazy(() => import("./ReactFlowBlock"));
+const SvgBlock = lazy(() => import("./SvgBlock"));
+const FabricEditorModal = lazy(() => import("./FabricEditorModal"));
+
+const DiagramLoader = () => (
+  <div className="flex items-center gap-2 text-[#94A3B8] text-xs py-6 px-4 animate-pulse">
+    <div className="w-4 h-4 border-2 border-[#245955] border-t-transparent rounded-full animate-spin" />
+    <span>Loading renderer…</span>
+  </div>
+);
 
 export default function MessageBubble({ message, onEditMessage, onRegenerate, isLastAssistant }) {
-  const { id, sender, text, time, initials, sources, attachments } = message;
+  const { id, sender, text, time, initials, sources, attachments, imageUrl } = message;
   const [copied, setCopied] = useState(false);
   const [voted, setVoted] = useState(null); // 'up' or 'down'
   const [isEditing, setIsEditing] = useState(false);
   const [editText, setEditText] = useState(text || "");
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [codeCopiedIdx, setCodeCopiedIdx] = useState(null);
+  const [showExportMenu, setShowExportMenu] = useState(false);
+  const [exportLoading, setExportLoading] = useState(null);
+  const [fabricEditorImage, setFabricEditorImage] = useState(null);
+  const exportMenuRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (exportMenuRef.current && !exportMenuRef.current.contains(e.target)) {
+        setShowExportMenu(false);
+      }
+    };
+    if (showExportMenu) document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showExportMenu]);
+
+  const handleExport = async (type) => {
+    setExportLoading(type);
+    try {
+      const chatTitle = "AI_Studio_Response";
+      if (type === "pdf") await downloadPDF(text, chatTitle);
+      else if (type === "docx") await downloadDOCX(text, chatTitle);
+      else if (type === "pptx") await downloadPPTX(text, chatTitle);
+      else if (type === "xlsx") await downloadXLSX(text, chatTitle);
+    } catch (err) {
+      console.error("Export failed:", err);
+    }
+    setExportLoading(null);
+    setShowExportMenu(false);
+  };
 
   const handleCopyCode = (codeStr, idx) => {
     navigator.clipboard.writeText(codeStr);
@@ -140,7 +188,34 @@ export default function MessageBubble({ message, onEditMessage, onRegenerate, is
         const codeLines = block.split("\n");
         const language = codeLines[0].replace("```", "").trim();
         const code = codeLines.slice(1, -1).join("\n");
-        const langClean = (language || "javascript").toLowerCase();
+        const langClean = (language || "text").toLowerCase();
+
+        // ── Mermaid diagrams ──
+        if (langClean === "mermaid") {
+          return (
+            <Suspense key={idx} fallback={<DiagramLoader />}>
+              <MermaidBlock code={code} />
+            </Suspense>
+          );
+        }
+
+        // ── React Flow interactive flowcharts ──
+        if (langClean === "reactflow" || langClean === "flow") {
+          return (
+            <Suspense key={idx} fallback={<DiagramLoader />}>
+              <ReactFlowBlock code={code} />
+            </Suspense>
+          );
+        }
+
+        // ── Inline SVG rendering ──
+        if (langClean === "svg" || (langClean === "xml" && code.trim().toLowerCase().startsWith("<svg"))) {
+          return (
+            <Suspense key={idx} fallback={<DiagramLoader />}>
+              <SvgBlock key={idx} code={code} />
+            </Suspense>
+          );
+        }
 
         return (
           <div key={idx} className="my-4 rounded-xl overflow-hidden border border-[#2E3236] shadow-md bg-[#1E1E1E]">
@@ -288,6 +363,30 @@ export default function MessageBubble({ message, onEditMessage, onRegenerate, is
             </div>
           )}
 
+          {/* Render Inline AI-Generated Image */}
+          {imageUrl && !message.isSvg && (
+            <div className="mb-3 relative group rounded-xl overflow-hidden border border-[#E7E7E7] dark:border-[#23272A] shadow-sm max-w-sm">
+              <img src={imageUrl} alt="AI Generated Graphic" className="w-full h-auto object-cover" />
+              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setFabricEditorImage(imageUrl)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-[#245955] hover:bg-[#1d4643] text-white text-xs font-bold rounded-lg shadow-md transition-all transform scale-95 group-hover:scale-100 cursor-pointer"
+                >
+                  <Pencil size={12} />
+                  <span>Edit in Canvas</span>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Render AI-Generated SVG Illustration */}
+          {message.isSvg && message.svgContent && (
+            <Suspense fallback={<DiagramLoader />}>
+              <SvgBlock code={message.svgContent} />
+            </Suspense>
+          )}
+
           {isEditing ? (
             <div className="space-y-2 mt-1 min-w-[260px] md:min-w-[400px]">
               <textarea
@@ -396,6 +495,53 @@ export default function MessageBubble({ message, onEditMessage, onRegenerate, is
                   <RotateCcw size={12} />
                 </button>
               )}
+              {/* Export Dropdown */}
+              <div className="relative" ref={exportMenuRef}>
+                <button 
+                  onClick={() => setShowExportMenu(!showExportMenu)}
+                  className={`p-1 rounded hover:bg-slate-100 dark:hover:bg-[#23272A] hover:text-[#171717] dark:hover:text-[#eceff1] transition-all cursor-pointer flex items-center gap-0.5 ${showExportMenu ? "text-[#245955] dark:text-[#347d78] bg-slate-100 dark:bg-[#23272A]" : "text-[#737373] dark:text-[#94A3B8]"}`}
+                  title="Export response"
+                >
+                  <Download size={12} />
+                  <ChevronDown size={8} />
+                </button>
+                {showExportMenu && (
+                  <div className="absolute bottom-full left-0 mb-1 bg-white dark:bg-[#1A1D21] border border-[#E5E5E5] dark:border-[#2D3136] rounded-lg shadow-xl z-50 min-w-[160px] py-1 animate-in fade-in slide-in-from-bottom-2 duration-150">
+                    <button
+                      onClick={() => handleExport("pdf")}
+                      disabled={exportLoading === "pdf"}
+                      className="w-full flex items-center gap-2 px-3 py-1.5 text-[11px] text-[#333] dark:text-[#ccc] hover:bg-slate-50 dark:hover:bg-[#23272A] transition-colors"
+                    >
+                      {exportLoading === "pdf" ? <Loader size={12} className="animate-spin" /> : <FileText size={12} className="text-red-500" />}
+                      Download as PDF
+                    </button>
+                    <button
+                      onClick={() => handleExport("docx")}
+                      disabled={exportLoading === "docx"}
+                      className="w-full flex items-center gap-2 px-3 py-1.5 text-[11px] text-[#333] dark:text-[#ccc] hover:bg-slate-50 dark:hover:bg-[#23272A] transition-colors"
+                    >
+                      {exportLoading === "docx" ? <Loader size={12} className="animate-spin" /> : <File size={12} className="text-blue-500" />}
+                      Download as Word
+                    </button>
+                    <button
+                      onClick={() => handleExport("pptx")}
+                      disabled={exportLoading === "pptx"}
+                      className="w-full flex items-center gap-2 px-3 py-1.5 text-[11px] text-[#333] dark:text-[#ccc] hover:bg-slate-50 dark:hover:bg-[#23272A] transition-colors"
+                    >
+                      {exportLoading === "pptx" ? <Loader size={12} className="animate-spin" /> : <Presentation size={12} className="text-orange-500" />}
+                      Download as PPT
+                    </button>
+                    <button
+                      onClick={() => handleExport("xlsx")}
+                      disabled={exportLoading === "xlsx"}
+                      className="w-full flex items-center gap-2 px-3 py-1.5 text-[11px] text-[#333] dark:text-[#ccc] hover:bg-slate-50 dark:hover:bg-[#23272A] transition-colors"
+                    >
+                      {exportLoading === "xlsx" ? <Loader size={12} className="animate-spin" /> : <FileSpreadsheet size={12} className="text-green-600" />}
+                      Download as Excel
+                    </button>
+                  </div>
+                )}
+              </div>
               <button 
                 onClick={() => setVoted("up")}
                 className={`p-1 rounded hover:bg-slate-100 dark:hover:bg-[#23272A] hover:text-emerald-500 dark:hover:text-emerald-400 transition-all cursor-pointer ${voted === "up" ? "text-emerald-500 dark:text-emerald-400 bg-slate-100 dark:bg-[#23272A]" : "text-[#737373] dark:text-[#94A3B8]"}`}
@@ -414,7 +560,20 @@ export default function MessageBubble({ message, onEditMessage, onRegenerate, is
           )}
         </div>
       </div>
-      
+
+      {/* Fabric.js Canvas Editor Modal */}
+      {fabricEditorImage && (
+        <Suspense fallback={
+          <div className="fixed inset-0 z-[200] bg-black/50 backdrop-blur-sm flex items-center justify-center">
+            <div className="bg-white dark:bg-[#16191B] p-6 rounded-2xl flex items-center gap-3 shadow-2xl">
+              <div className="w-5 h-5 border-2 border-[#245955] border-t-transparent rounded-full animate-spin" />
+              <span className="text-sm font-semibold text-[#333] dark:text-[#ccc]">Loading editor components…</span>
+            </div>
+          </div>
+        }>
+          <FabricEditorModal imageUrl={fabricEditorImage} onClose={() => setFabricEditorImage(null)} />
+        </Suspense>
+      )}
     </div>
   );
 }

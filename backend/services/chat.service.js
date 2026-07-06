@@ -106,6 +106,7 @@ const getUserChats = async (userId, userEmail) => {
           id: m._id.toString(),
           sender: m.sender,
           text: m.content,
+          imageUrl: m.imageUrl,
           tokens: m.tokens || 0,
           time: new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         })),
@@ -134,6 +135,7 @@ const getChatById = async (chatId, userId) => {
       id: m._id.toString(),
       sender: m.sender,
       text: m.content,
+      imageUrl: m.imageUrl,
       tokens: m.tokens || 0,
       time: new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     })),
@@ -225,7 +227,7 @@ const deleteChat = async (chatId, userId) => {
   return true;
 };
 
-const addMessageToChat = async (chatId, userId, { sender, content, tokens }) => {
+const addMessageToChat = async (chatId, userId, { sender, content, tokens, imageUrl }) => {
   const db = getDb();
   const objChatId = toObjectId(chatId);
 
@@ -234,6 +236,7 @@ const addMessageToChat = async (chatId, userId, { sender, content, tokens }) => 
       id: `msg-${Date.now()}`,
       sender,
       text: content,
+      imageUrl,
       tokens: tokens || 0,
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     };
@@ -243,6 +246,7 @@ const addMessageToChat = async (chatId, userId, { sender, content, tokens }) => 
     chatId: objChatId,
     sender,
     content,
+    imageUrl,
     tokens: tokens || 0,
     createdAt: new Date(),
   };
@@ -258,6 +262,7 @@ const addMessageToChat = async (chatId, userId, { sender, content, tokens }) => 
     id: result.insertedId.toString(),
     sender: newMessage.sender,
     text: newMessage.content,
+    imageUrl: newMessage.imageUrl,
     tokens: newMessage.tokens,
     time: new Date(newMessage.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
   };
