@@ -236,7 +236,21 @@ const chatSlice = createSlice({
         const lastMsg = chat.messages[chat.messages.length - 1];
         if (lastMsg.sender === "assistant") {
           if (!lastMsg.sources) lastMsg.sources = [];
-          lastMsg.sources.push(source);
+          const exists = lastMsg.sources.some(s => s.url === source.url);
+          if (!exists) {
+            lastMsg.sources.push(source);
+            saveState(state);
+          }
+        }
+      }
+    },
+    setLastMessageSources(state, action) {
+      const { chatId, sources } = action.payload;
+      const chat = state.conversations.find((conversation) => conversation.id === chatId);
+      if (chat && chat.messages.length > 0) {
+        const lastMsg = chat.messages[chat.messages.length - 1];
+        if (lastMsg.sender === "assistant") {
+          lastMsg.sources = sources;
           saveState(state);
         }
       }
@@ -273,9 +287,16 @@ const chatSlice = createSlice({
       .addCase(fetchChats.fulfilled, (state, action) => {
         state.isLoading = false;
         state.conversations = action.payload;
-        if (action.payload.length > 0) {
+
+        const savedActiveId = typeof window !== "undefined" ? localStorage.getItem("chat_active_conversation_id") : null;
+        const activeExists = savedActiveId && action.payload.some(c => c.id === savedActiveId);
+
+        if (activeExists) {
+          state.activeConversationId = savedActiveId;
+        } else if (action.payload.length > 0) {
           state.activeConversationId = action.payload[0].id;
         }
+
         persistState(state);
       })
       .addCase(fetchChats.rejected, (state, action) => {
@@ -329,6 +350,7 @@ export const {
   addMessage,
   updateLastMessageText,
   addSourceToLastMessage,
+  setLastMessageSources,
   clearActiveChat,
   editMessage,
   syncActiveConversation

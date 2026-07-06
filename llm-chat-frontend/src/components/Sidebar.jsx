@@ -19,7 +19,8 @@ import {
   setSearchQuery,
   createChatAsync,
   deleteChatAsync,
-  renameChatAsync
+  renameChatAsync,
+  renameChat
 } from "../store/chatSlice";
 import { toggleSidebar, setSidebarOpen, setSettingsModalOpen } from "../store/uiSlice";
 import { logout } from "../store/authSlice";
@@ -58,8 +59,10 @@ export default function Sidebar() {
 
   const saveRename = (e, id) => {
     e.stopPropagation();
-    if (editTitle.trim()) {
-      dispatch(renameChatAsync({ id, title: editTitle.trim() }));
+    const newTitle = editTitle.trim();
+    if (newTitle) {
+      dispatch(renameChat({ id, title: newTitle }));
+      dispatch(renameChatAsync({ id, title: newTitle }));
     }
     setEditingId(null);
   };

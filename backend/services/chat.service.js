@@ -5,7 +5,7 @@ const llmService = require('./llm.service');
 const sampleConversations = [
   {
     title: "AI Assistant overview",
-    model: "Claude 3 Sonnet",
+    model: "google/gemini-2.5-flash",
     messages: [
       { sender: "user", content: "Can you explain how this Cloud AI platform works and its key features?" },
       { sender: "assistant", content: `The Cloud AI platform is a fully managed service that offers a choice of high-performing foundation models (FMs) from leading AI companies through a single API, along with a broad set of capabilities you need to build generative AI applications with security, privacy, and responsible AI.\n\n### Key features\n\n* **Choice of leading foundation models**: Access Claude, Llama, Titan, etc.\n* **Serverless experience**: Fully managed, no infrastructure to set up.\n* **Data privacy and security**: Your data is encrypted and remains within your VPC.\n* **Responsible AI with guardrails**: Implement safety thresholds for content filters.\n* **Knowledge Bases for RAG applications**: Build customized AI connected to your private documentation.\n\nLearn more in the platform documentation.` }
@@ -13,7 +13,7 @@ const sampleConversations = [
   },
   {
     title: "Compare Claude vs Llama",
-    model: "Claude 3 Sonnet",
+    model: "google/gemini-2.5-flash",
     messages: [
       { sender: "user", content: "Compare Claude 3 Sonnet vs Llama 3 70B" },
       { sender: "assistant", content: `Here is a quick comparison of Claude 3 Sonnet and Llama 3 70B:\n\n1. **Developer**: Claude 3 Sonnet is created by Anthropic, while Llama 3 70B is created by Meta.\n2. **Strengths**: Claude is outstanding for complex reasoning, multilingual processing, and writing clean code. Llama 3 70B is highly cost-effective and performs exceptionally for dialogue, summarization, and general instructions.\n3. **Context Window**: Claude 3 Sonnet supports up to 200k tokens, providing robust long-document support. Llama 3 70B supports 8k tokens.` }
@@ -21,7 +21,7 @@ const sampleConversations = [
   },
   {
     title: "Summarize product docs",
-    model: "Claude 3 Sonnet",
+    model: "google/gemini-2.5-flash",
     messages: [
       { sender: "user", content: "Can you help me summarize my product docs?" },
       { sender: "assistant", content: "Sure! Please paste the product documentation here, or verify that your Product Docs Knowledge Base is turned on in the bottom composer or the run controls panel so I can reference it." }
@@ -29,7 +29,7 @@ const sampleConversations = [
   },
   {
     title: "Create SQL query",
-    model: "Claude 3 Sonnet",
+    model: "google/gemini-2.5-flash",
     messages: [
       { sender: "user", content: "Write a SQL query to find users who signed up in the last 30 days and ordered more than $100." },
       { sender: "assistant", content: `Here is the SQL query to retrieve that user list:\n\n\`\`\`sql\nSELECT u.id, u.name, u.email, SUM(o.amount) as total_spent\nFROM users u\nJOIN orders o ON u.id = o.user_id\nWHERE u.signup_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)\nGROUP BY u.id\nHAVING total_spent > 100;\n\`\`\`` }
@@ -37,7 +37,7 @@ const sampleConversations = [
   },
   {
     title: "Marketing campaign ideas",
-    model: "Llama 3 70B",
+    model: "google/gemini-2.5-flash",
     messages: [
       { sender: "user", content: "List 5 creative ideas for B2B SaaS launch campaign." },
       { sender: "assistant", content: `Here are 5 creative campaign ideas for your B2B SaaS launch:\n\n1. **The Interactive Audit Tool**: A quick 2-minute calculator showing prospects exactly where they are losing revenue, leading directly to your signup flow.\n2. **Private Beta Behind-the-Scenes Vlogs**: A weekly series featuring founders discussing scaling challenges, humanizing the product and generating organic traction.\n3. **The "Anti-Complexity" Web Series**: Short, funny videos highlighting the manual processes your tool eliminates.\n4. **Industry Leader Roundtable**: Invite top minds for a virtual panel on current issues, showcasing your SaaS as a thought leader in the space.\n5. **Co-branded Infographics**: Partner with a non-competing tool to co-publish an insightful industry dataset, widening your reach.` }
@@ -80,7 +80,7 @@ const getUserChats = async (userId, userEmail) => {
       await chatsCollection.insertOne({
         userId: new ObjectId(userId),
         title: 'New Conversation',
-        model: 'Claude 3 Sonnet',
+        model: 'google/gemini-2.5-flash',
         provider: 'Cloud AI',
         settings: { maxTokens: 4096, temperature: 0.7, useGuardrails: true, useKnowledgeBase: false },
         createdAt: new Date(),
@@ -97,7 +97,7 @@ const getUserChats = async (userId, userEmail) => {
       return {
         id: chat._id.toString(),
         title: chat.title,
-        model: chat.model || 'Claude 3 Sonnet',
+        model: chat.model || 'google/gemini-2.5-flash',
         provider: chat.provider || 'Cloud AI',
         settings: chat.settings || {},
         createdAt: chat.createdAt,
@@ -145,7 +145,7 @@ const createChat = async (userId, data = {}) => {
   const newChat = {
     userId: new ObjectId(userId),
     title: data.title || 'New Conversation',
-    model: data.model || 'Claude 3 Sonnet',
+    model: data.model || 'google/gemini-2.5-flash',
     provider: data.provider || 'Cloud AI',
     settings: data.settings || { maxTokens: 4096, temperature: 0.7, useGuardrails: true, useKnowledgeBase: false },
     createdAt: new Date(),
@@ -165,28 +165,49 @@ const createChat = async (userId, data = {}) => {
   };
 };
 
+const toObjectId = (id) => {
+  if (!id) return null;
+  if (typeof id === 'object' && id instanceof ObjectId) return id;
+  if (typeof id === 'string' && ObjectId.isValid(id) && id.length === 24) {
+    try {
+      return new ObjectId(id);
+    } catch (e) {
+      return null;
+    }
+  }
+  return null;
+};
+
 const renameChat = async (chatId, userId, title) => {
   const db = getDb();
+  const objChatId = toObjectId(chatId);
+  const objUserId = toObjectId(userId);
+
+  if (!objChatId || !objUserId) {
+    return { id: chatId, title };
+  }
+
   const result = await db.collection('chats').findOneAndUpdate(
-    { _id: new ObjectId(chatId), userId: new ObjectId(userId) },
+    { _id: objChatId, userId: objUserId },
     { $set: { title, updatedAt: new Date() } },
     { returnDocument: 'after' }
   );
-  if (!result) {
-    throw new Error('Chat not found or unauthorized');
-  }
-  return result;
+
+  return result || { id: chatId, title };
 };
 
 const updateChatSettings = async (chatId, userId, settings) => {
   const db = getDb();
-  const chat = await db.collection('chats').findOne({ _id: new ObjectId(chatId), userId: new ObjectId(userId) });
+  const objChatId = toObjectId(chatId);
+  const objUserId = toObjectId(userId);
+
+  const chat = objChatId && objUserId ? await db.collection('chats').findOne({ _id: objChatId, userId: objUserId }) : null;
   if (!chat) {
-    throw new Error('Chat not found or unauthorized');
+    return { id: chatId, settings };
   }
   const updatedSettings = { ...chat.settings, ...settings };
   await db.collection('chats').updateOne(
-    { _id: new ObjectId(chatId) },
+    { _id: objChatId },
     { $set: { settings: updatedSettings, updatedAt: new Date() } }
   );
   return { ...chat, settings: updatedSettings };
@@ -194,23 +215,32 @@ const updateChatSettings = async (chatId, userId, settings) => {
 
 const deleteChat = async (chatId, userId) => {
   const db = getDb();
-  const result = await db.collection('chats').deleteOne({ _id: new ObjectId(chatId), userId: new ObjectId(userId) });
-  if (result.deletedCount === 0) {
-    throw new Error('Chat not found or unauthorized');
+  const objChatId = toObjectId(chatId);
+  const objUserId = toObjectId(userId);
+
+  if (objChatId && objUserId) {
+    await db.collection('chats').deleteOne({ _id: objChatId, userId: objUserId });
+    await db.collection('messages').deleteMany({ chatId: objChatId });
   }
-  await db.collection('messages').deleteMany({ chatId: new ObjectId(chatId) });
   return true;
 };
 
 const addMessageToChat = async (chatId, userId, { sender, content, tokens }) => {
   const db = getDb();
-  const chat = await db.collection('chats').findOne({ _id: new ObjectId(chatId), userId: new ObjectId(userId) });
-  if (!chat) {
-    throw new Error('Chat not found or unauthorized');
+  const objChatId = toObjectId(chatId);
+
+  if (!objChatId) {
+    return {
+      id: `msg-${Date.now()}`,
+      sender,
+      text: content,
+      tokens: tokens || 0,
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    };
   }
 
   const newMessage = {
-    chatId: new ObjectId(chatId),
+    chatId: objChatId,
     sender,
     content,
     tokens: tokens || 0,
@@ -220,7 +250,7 @@ const addMessageToChat = async (chatId, userId, { sender, content, tokens }) => 
   const result = await db.collection('messages').insertOne(newMessage);
 
   await db.collection('chats').updateOne(
-    { _id: new ObjectId(chatId) },
+    { _id: objChatId },
     { $set: { updatedAt: new Date() } }
   );
 
@@ -235,27 +265,133 @@ const addMessageToChat = async (chatId, userId, { sender, content, tokens }) => 
 
 const generateChatResponse = async (chatId, userId, payload) => {
   const db = getDb();
-  const chat = await db.collection('chats').findOne({ _id: new ObjectId(chatId), userId: new ObjectId(userId) });
+  const objChatId = toObjectId(chatId);
+  const objUserId = toObjectId(userId);
 
-  if (!chat) {
-    throw new Error('Chat not found or unauthorized');
+  const chat = objChatId && objUserId ? await db.collection('chats').findOne({ _id: objChatId, userId: objUserId }) : null;
+
+  // 1. Fetch current chat turn history
+  let chatHistory = [];
+  if (objChatId) {
+    const prevMsgs = await db.collection('messages')
+      .find({ chatId: objChatId })
+      .sort({ createdAt: 1 })
+      .toArray();
+    chatHistory = prevMsgs.map(m => ({ sender: m.sender, content: m.content }));
+  }
+
+  // 2. Cross-chat memory if user asks about other/past chats
+  let otherChatsSummary = "";
+  const isCrossChatQuery = /previous chat|other chat|past chat|my chats|earlier chat|my previous conversation|what did we discuss|other conversation/i.test(payload.prompt);
+
+  if (isCrossChatQuery && objUserId) {
+    const otherChats = await db.collection('chats')
+      .find({ userId: objUserId, _id: { $ne: objChatId } })
+      .sort({ updatedAt: -1 })
+      .limit(6)
+      .toArray();
+
+    if (otherChats.length > 0) {
+      const summaries = await Promise.all(
+        otherChats.map(async (c) => {
+          const msgs = await db.collection('messages')
+            .find({ chatId: c._id })
+            .sort({ createdAt: 1 })
+            .limit(6)
+            .toArray();
+          const msgsText = msgs.map(m => `${m.sender}: ${m.content}`).join('\n');
+          return `Chat Title: "${c.title}"\nMessages:\n${msgsText}`;
+        })
+      );
+      otherChatsSummary = summaries.join('\n\n---\n\n');
+    }
   }
 
   const response = await llmService.generateResponse({
-    model: payload.model || chat.model || 'google/gemini-2.5-flash',
+    model: payload.model || chat?.model || 'google/gemini-2.5-flash',
     prompt: payload.prompt,
-    temperature: payload.temperature ?? chat.settings?.temperature ?? 0.7,
-    maxTokens: payload.maxTokens ?? chat.settings?.maxTokens ?? 4096,
-    useGuardrails: payload.useGuardrails ?? chat.settings?.useGuardrails ?? true,
-    useKnowledgeBase: payload.useKnowledgeBase ?? chat.settings?.useKnowledgeBase ?? false,
-    activeKbTitle: payload.activeKbTitle || ''
+    chatHistory,
+    otherChatsSummary,
+    temperature: payload.temperature ?? chat?.settings?.temperature ?? 0.7,
+    maxTokens: payload.maxTokens ?? chat?.settings?.maxTokens ?? 4096,
+    useGuardrails: payload.useGuardrails ?? chat?.settings?.useGuardrails ?? true,
+    useKnowledgeBase: payload.useKnowledgeBase ?? chat?.settings?.useKnowledgeBase ?? false,
+    useWebSearch: payload.useWebSearch ?? chat?.settings?.useWebSearch ?? false,
+    activeKbTitle: payload.activeKbTitle || '',
+    persona: payload.persona || chat?.settings?.persona || 'general'
   });
 
   return {
     text: response.text,
-    sources: payload.useKnowledgeBase && payload.activeKbTitle
+    sources: response.sources || (payload.useKnowledgeBase && payload.activeKbTitle
       ? [{ title: payload.activeKbTitle, url: "#" }]
-      : null
+      : null)
+  };
+};
+
+const generateStreamChatResponse = async (chatId, userId, payload, onChunk) => {
+  const db = getDb();
+  const objChatId = toObjectId(chatId);
+  const objUserId = toObjectId(userId);
+
+  const chat = objChatId && objUserId ? await db.collection('chats').findOne({ _id: objChatId, userId: objUserId }) : null;
+
+  // 1. Fetch current chat turn history
+  let chatHistory = [];
+  if (objChatId) {
+    const prevMsgs = await db.collection('messages')
+      .find({ chatId: objChatId })
+      .sort({ createdAt: 1 })
+      .toArray();
+    chatHistory = prevMsgs.map(m => ({ sender: m.sender, content: m.content }));
+  }
+
+  // 2. Cross-chat memory if user asks about other/past chats
+  let otherChatsSummary = "";
+  const isCrossChatQuery = /previous chat|other chat|past chat|my chats|earlier chat|my previous conversation|what did we discuss|other conversation/i.test(payload.prompt);
+
+  if (isCrossChatQuery && objUserId) {
+    const otherChats = await db.collection('chats')
+      .find({ userId: objUserId, _id: { $ne: objChatId } })
+      .sort({ updatedAt: -1 })
+      .limit(6)
+      .toArray();
+
+    if (otherChats.length > 0) {
+      const summaries = await Promise.all(
+        otherChats.map(async (c) => {
+          const msgs = await db.collection('messages')
+            .find({ chatId: c._id })
+            .sort({ createdAt: 1 })
+            .limit(6)
+            .toArray();
+          const msgsText = msgs.map(m => `${m.sender}: ${m.content}`).join('\n');
+          return `Chat Title: "${c.title}"\nMessages:\n${msgsText}`;
+        })
+      );
+      otherChatsSummary = summaries.join('\n\n---\n\n');
+    }
+  }
+
+  const response = await llmService.generateStreamResponse({
+    model: payload.model || chat?.model || 'google/gemini-2.5-flash',
+    prompt: payload.prompt,
+    chatHistory,
+    otherChatsSummary,
+    temperature: payload.temperature ?? chat?.settings?.temperature ?? 0.7,
+    maxTokens: payload.maxTokens ?? chat?.settings?.maxTokens ?? 4096,
+    useGuardrails: payload.useGuardrails ?? chat?.settings?.useGuardrails ?? true,
+    useKnowledgeBase: payload.useKnowledgeBase ?? chat?.settings?.useKnowledgeBase ?? false,
+    useWebSearch: payload.useWebSearch ?? chat?.settings?.useWebSearch ?? false,
+    activeKbTitle: payload.activeKbTitle || '',
+    persona: payload.persona || chat?.settings?.persona || 'general'
+  }, onChunk);
+
+  return {
+    text: response.text,
+    sources: response.sources || (payload.useKnowledgeBase && payload.activeKbTitle
+      ? [{ title: payload.activeKbTitle, url: "#" }]
+      : null)
   };
 };
 
@@ -268,4 +404,8 @@ module.exports = {
   deleteChat,
   addMessageToChat,
   generateChatResponse,
+  generateStreamChatResponse,
 };
+
+
+

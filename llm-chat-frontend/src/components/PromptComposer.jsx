@@ -15,15 +15,21 @@ import {
   FileCode,
   File,
   Mic,
-  MicOff
+  MicOff,
+  Square,
+  Globe,
+  UserCheck
 } from "lucide-react";
+import { AI_PERSONAS } from "../config/models";
 import { 
   addMessage, 
   setLoading, 
   updateLastMessageText, 
   addSourceToLastMessage,
+  setLastMessageSources,
   updateChatSettings,
-  renameChat
+  renameChat,
+  renameChatAsync
 } from "../store/chatSlice";
 import { 
   toggleRightPanel, 
@@ -159,19 +165,42 @@ export default function PromptComposer() {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + " " + sizes[i];
   };
 
+  const abortControllerRef = useRef(null);
+
+  const handleStopGeneration = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+      dispatch(setLoading(false));
+    }
+  };
+
   // Process files selected via file input or drop
-  const handleAddFiles = (files) => {
-    const newAttachments = Array.from(files).map((file) => {
-      const isImage = file.type.startsWith("image/");
-      return {
-        id: `att-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
-        name: file.name,
-        size: formatFileSize(file.size),
-        type: file.type,
-        isImage,
-        previewUrl: isImage ? URL.createObjectURL(file) : null
-      };
-    });
+  const handleAddFiles = async (files) => {
+    const fileArray = Array.from(files);
+    const newAttachments = await Promise.all(
+      fileArray.map(async (file) => {
+        const isImage = file.type.startsWith("image/");
+        let textContent = null;
+        if (!isImage && (file.type.startsWith("text/") || file.name.match(/\.(txt|md|json|js|jsx|ts|tsx|py|csv|html|css|sql|xml|yaml|yml)$/i))) {
+          try {
+            textContent = await file.text();
+          } catch (e) {
+            console.error("Could not read text content from file:", e);
+          }
+        }
+
+        return {
+          id: `att-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+          name: file.name,
+          size: formatFileSize(file.size),
+          type: file.type,
+          isImage,
+          textContent,
+          previewUrl: isImage ? URL.createObjectURL(file) : null
+        };
+      })
+    );
     setAttachments(prev => [...prev, ...newAttachments]);
   };
 
@@ -219,6 +248,18 @@ export default function PromptComposer() {
     const userMessageText = inputText.trim();
     const currentAttachments = [...attachments];
 
+    // Auto-update generic title to user's first prompt headline
+    const isGenericTitle = !activeChat.title || activeChat.title === "New Conversation" || activeChat.title === "New chat";
+    const shouldUpdateTitle = (activeChat.messages.length === 0 || isGenericTitle) && userMessageText;
+
+    if (shouldUpdateTitle) {
+      const cleanTitle = userMessageText.split("\n")[0].slice(0, 45).trim() || "New Conversation";
+      dispatch(renameChatAsync({
+        id: activeChat.id,
+        title: cleanTitle
+      }));
+    }
+
     setInputText("");
     setAttachments([]);
 
@@ -238,13 +279,6 @@ export default function PromptComposer() {
       }
     }));
 
-    if (activeChat.messages.length === 0 && userMessageText) {
-      dispatch(renameChat({
-        id: activeChat.id,
-        title: userMessageText.slice(0, 48)
-      }));
-    }
-
     // 2. Set loading state
     dispatch(setLoading(true));
 
@@ -261,12 +295,21 @@ export default function PromptComposer() {
       }
     }));
 
-    // Construct prompt sent to API including attachment names
+    // Construct prompt sent to API including attachment names and text contents
     let fullPrompt = userMessageText;
     if (currentAttachments.length > 0) {
-      const fileListStr = currentAttachments.map(a => `[Attached File: ${a.name} (${a.size})]`).join("\n");
+      const fileListStr = currentAttachments.map(a => {
+        let str = `[Attached File: ${a.name} (${a.size})]`;
+        if (a.textContent) {
+          str += `\n\n--- Start of File (${a.name}) ---\n${a.textContent}\n--- End of File (${a.name}) ---`;
+        }
+        return str;
+      }).join("\n\n");
       fullPrompt = userMessageText ? `${userMessageText}\n\n${fileListStr}` : fileListStr;
     }
+
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
 
     try {
       chatApi.saveMessage(activeChat.id, {
@@ -278,7 +321,8 @@ export default function PromptComposer() {
         conversation: activeChat,
         prompt: fullPrompt,
         streamingOn,
-        activeKb
+        activeKb,
+        signal: controller.signal
       }, (chunk) => {
         dispatch(updateLastMessageText({ chatId: activeChat.id, text: chunk }));
       }, (finalText, sources) => {
@@ -287,22 +331,29 @@ export default function PromptComposer() {
           sender: "assistant",
           content: finalText
         }).catch((err) => console.error("Failed to save assistant message to DB:", err));
-        if (sources) {
-          sources.forEach(src => {
-            dispatch(addSourceToLastMessage({ chatId: activeChat.id, source: src }));
-          });
+        if (sources && sources.length > 0) {
+          dispatch(setLastMessageSources({ chatId: activeChat.id, sources }));
         }
         dispatch(setLoading(false));
+        abortControllerRef.current = null;
       });
     } catch (error) {
-      dispatch(updateLastMessageText({
-        chatId: activeChat.id,
-        text: `Request failed for **${getModelLabel(activeChat.model)}**.
+      if (error.name === "AbortError") {
+        dispatch(updateLastMessageText({
+          chatId: activeChat.id,
+          text: `*[Generation stopped by user]*`
+        }));
+      } else {
+        dispatch(updateLastMessageText({
+          chatId: activeChat.id,
+          text: `Request failed for **${getModelLabel(activeChat.model)}**.
 ${error.message}
 
 If you're using a free model, double-check that the model ID is still available and that your OpenRouter API key is valid.`
-      }));
+        }));
+      }
       dispatch(setLoading(false));
+      abortControllerRef.current = null;
     }
   };
 
@@ -454,20 +505,28 @@ If you're using a free model, double-check that the model ID is still available 
             </button>
           </div>
 
-          {/* Right Tools Controls + Send */}
+          {/* Right Tools Controls + Send / Stop */}
           <div className="flex items-center gap-2">
-            
-            {/* Send circle */}
-            <button 
-              onClick={handleSend}
-              disabled={(!inputText.trim() && attachments.length === 0) || isLoading}
-              className={`w-9 h-9 rounded-full flex items-center justify-center text-white transition-all cursor-pointer shadow-sm
-                ${(inputText.trim() || attachments.length > 0) && !isLoading 
-                  ? "bg-[#245955] dark:bg-[#347d78] hover:bg-[#1d4643] dark:hover:bg-[#2b6763]" 
-                  : "bg-slate-200 dark:bg-zinc-800 cursor-not-allowed text-slate-400 dark:text-zinc-600"}`}
-            >
-              <Send size={14} className={(inputText.trim() || attachments.length > 0) ? "translate-x-0.5 -translate-y-0.5 rotate-45" : ""} />
-            </button>
+            {isLoading ? (
+              <button 
+                onClick={handleStopGeneration}
+                className="w-9 h-9 rounded-full bg-rose-500 hover:bg-rose-600 flex items-center justify-center text-white transition-all cursor-pointer shadow-md"
+                title="Stop generating response"
+              >
+                <Square size={13} className="fill-white" />
+              </button>
+            ) : (
+              <button 
+                onClick={handleSend}
+                disabled={!inputText.trim() && attachments.length === 0}
+                className={`w-9 h-9 rounded-full flex items-center justify-center text-white transition-all cursor-pointer shadow-sm
+                  ${(inputText.trim() || attachments.length > 0) 
+                    ? "bg-[#245955] dark:bg-[#347d78] hover:bg-[#1d4643] dark:hover:bg-[#2b6763]" 
+                    : "bg-slate-200 dark:bg-zinc-800 cursor-not-allowed text-slate-400 dark:text-zinc-600"}`}
+              >
+                <Send size={14} className={(inputText.trim() || attachments.length > 0) ? "translate-x-0.5 -translate-y-0.5 rotate-45" : ""} />
+              </button>
+            )}
           </div>
 
         </div>
@@ -475,7 +534,7 @@ If you're using a free model, double-check that the model ID is still available 
 
       {/* Disclaimers footnote */}
       <div className="text-[10px] text-[#A3A3A3] dark:text-[#64748B] text-center mt-3 select-none transition-colors">
-        LLM responses may be inaccurate. Verify critical outputs before use.
+        AI Studio can make mistakes. Check important info.
       </div>
     </div>
   );

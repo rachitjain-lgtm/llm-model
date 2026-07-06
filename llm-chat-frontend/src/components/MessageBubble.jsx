@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
+import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
 import { 
   ThumbsUp, 
   ThumbsDown, 
@@ -12,16 +14,24 @@ import {
   File,
   Edit2,
   Volume2,
-  VolumeX
+  VolumeX,
+  RotateCcw
 } from "lucide-react";
 
-export default function MessageBubble({ message, onEditMessage }) {
+export default function MessageBubble({ message, onEditMessage, onRegenerate, isLastAssistant }) {
   const { id, sender, text, time, initials, sources, attachments } = message;
   const [copied, setCopied] = useState(false);
   const [voted, setVoted] = useState(null); // 'up' or 'down'
   const [isEditing, setIsEditing] = useState(false);
   const [editText, setEditText] = useState(text || "");
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [codeCopiedIdx, setCodeCopiedIdx] = useState(null);
+
+  const handleCopyCode = (codeStr, idx) => {
+    navigator.clipboard.writeText(codeStr);
+    setCodeCopiedIdx(idx);
+    setTimeout(() => setCodeCopiedIdx(null), 2000);
+  };
 
   const handleCopy = () => {
     navigator.clipboard.writeText(text);
@@ -130,13 +140,48 @@ export default function MessageBubble({ message, onEditMessage }) {
         const codeLines = block.split("\n");
         const language = codeLines[0].replace("```", "").trim();
         const code = codeLines.slice(1, -1).join("\n");
+        const langClean = (language || "javascript").toLowerCase();
+
         return (
-          <pre key={idx} className="bg-[#FAFAFA] dark:bg-[#1E2326] border border-[#E7E7E7] dark:border-[#23272A] rounded-xl p-4 font-mono text-[11px] overflow-x-auto my-3 text-[#171717] dark:text-[#eceff1] leading-relaxed shadow-sm transition-colors">
-            <div className="flex justify-between items-center text-[9px] uppercase tracking-wider text-[#A3A3A3] dark:text-[#64748B] mb-2 font-sans select-none border-b border-[#E7E7E7] dark:border-[#23272A] pb-1 transition-colors">
-              <span>{language || "code"}</span>
+          <div key={idx} className="my-4 rounded-xl overflow-hidden border border-[#2E3236] shadow-md bg-[#1E1E1E]">
+            {/* Header bar with Language indicator & Copy Code Button */}
+            <div className="flex justify-between items-center px-4 py-2 bg-[#252526] text-[10px] uppercase tracking-wider text-[#9CDCFE] font-mono border-b border-[#333333] select-none">
+              <span className="font-semibold text-[11px] text-[#D4D4D4] lowercase">{language || "code"}</span>
+              <button
+                type="button"
+                onClick={() => handleCopyCode(code, idx)}
+                className="hover:text-white text-[#CCCCCC] transition-colors cursor-pointer flex items-center gap-1.5 font-semibold text-[10px] bg-white/10 hover:bg-white/20 px-2.5 py-1 rounded-md"
+              >
+                {codeCopiedIdx === idx ? (
+                  <>
+                    <Check size={11} className="text-emerald-400" />
+                    <span className="text-emerald-400">Copied!</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy size={11} />
+                    <span>Copy code</span>
+                  </>
+                )}
+              </button>
             </div>
-            <code>{code}</code>
-          </pre>
+
+            {/* VS Code Syntax Highlighter */}
+            <SyntaxHighlighter
+              language={langClean}
+              style={vscDarkPlus}
+              customStyle={{
+                margin: 0,
+                padding: "1.2rem 1rem",
+                fontSize: "12px",
+                lineHeight: "1.6",
+                background: "#1E1E1E",
+                fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace"
+              }}
+            >
+              {code}
+            </SyntaxHighlighter>
+          </div>
         );
       }
       
@@ -342,6 +387,15 @@ export default function MessageBubble({ message, onEditMessage }) {
               >
                 {copied ? <Check size={12} className="text-emerald-500" /> : <Copy size={12} />}
               </button>
+              {onRegenerate && (
+                <button 
+                  onClick={onRegenerate}
+                  className="p-1 rounded hover:bg-slate-100 dark:hover:bg-[#23272A] hover:text-[#171717] dark:hover:text-[#eceff1] transition-all cursor-pointer text-[#737373] dark:text-[#94A3B8]"
+                  title="Regenerate response"
+                >
+                  <RotateCcw size={12} />
+                </button>
+              )}
               <button 
                 onClick={() => setVoted("up")}
                 className={`p-1 rounded hover:bg-slate-100 dark:hover:bg-[#23272A] hover:text-emerald-500 dark:hover:text-emerald-400 transition-all cursor-pointer ${voted === "up" ? "text-emerald-500 dark:text-emerald-400 bg-slate-100 dark:bg-[#23272A]" : "text-[#737373] dark:text-[#94A3B8]"}`}

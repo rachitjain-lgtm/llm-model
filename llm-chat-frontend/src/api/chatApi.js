@@ -59,18 +59,76 @@ export const chatApi = {
     conversation,
     prompt,
     streamingOn,
-    activeKb
+    activeKb,
+    signal
   }, onChunk, onDone) => {
-    const response = await axiosClient.post(`/chats/${conversation.id}/generate`, {
-      prompt,
-      model: conversation.model,
-      temperature: conversation.temperature,
-      maxTokens: conversation.maxTokens,
+    const baseURL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+    const token = localStorage.getItem("token");
+
+    const response = await fetch(`${baseURL}/chats/${conversation.id}/generate`, {
+      method: "POST",
+      signal,
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {})
+      },
+      body: JSON.stringify({
+        prompt,
+        model: conversation.model,
+        temperature: conversation.temperature,
+        maxTokens: conversation.maxTokens,
+        useGuardrails: conversation.useGuardrails,
+        useKnowledgeBase: conversation.useKnowledgeBase,
+        useWebSearch: conversation.useWebSearch,
+        activeKbTitle: activeKb?.title || "",
+        persona: conversation.persona || "general"
+      })
     });
 
-    const payload = response.data?.data || response.data;
-    const finalText = payload?.text || "The model returned an empty response.";
-    const sources = payload?.sources || null;
-    streamText(finalText, streamingOn, onChunk, (streamedText) => onDone(streamedText, sources));
+    if (!response.ok) {
+      const errJson = await response.json().catch(() => ({}));
+      throw new Error(errJson.message || `HTTP error ${response.status}`);
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder("utf-8");
+    let accumulatedText = "";
+    let finalSources = null;
+    let buffer = "";
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop() || "";
+
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed || !trimmed.startsWith("data: ")) continue;
+
+        try {
+          const payload = JSON.parse(trimmed.slice(6));
+          if (payload.error) {
+            throw new Error(payload.error);
+          }
+          if (payload.chunk) {
+            accumulatedText += payload.chunk;
+            onChunk(accumulatedText);
+          }
+          if (payload.done) {
+            if (payload.text) accumulatedText = payload.text;
+            if (payload.sources) finalSources = payload.sources;
+          }
+        } catch (e) {
+          if (e.message && !e.message.includes("JSON")) {
+            throw e;
+          }
+        }
+      }
+    }
+
+    onDone(accumulatedText || "The model returned an empty response.", finalSources);
   }
 };

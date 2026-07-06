@@ -23,6 +23,8 @@ const clearStoredSession = () => {
   localStorage.removeItem("user");
   localStorage.removeItem("token");
   localStorage.removeItem("refreshToken");
+  localStorage.removeItem("chat_active_conversation_id");
+  localStorage.removeItem("chat_conversations");
 };
 
 const getStoredUsersDb = () => {

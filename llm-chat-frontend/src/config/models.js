@@ -36,11 +36,19 @@ export const MODEL_OPTIONS = [
   }
 ];
 
-export const DEFAULT_MODEL_ID = "deepseek/deepseek-r1";
+export const DEFAULT_MODEL_ID = "google/gemini-2.5-flash";
 
 export function getModelLabel(modelId) {
   if (!modelId || modelId === "Claude 3 Sonnet" || modelId.includes("Claude")) {
-    return "DeepSeek R1";
+    return "Gemini 2.5 Flash";
   }
   return MODEL_OPTIONS.find((model) => model.id === modelId)?.label || modelId;
 }
+
+export const AI_PERSONAS = [
+  { id: "general", label: "General Assistant", prompt: "You are a concise, accurate, and helpful AI assistant." },
+  { id: "engineer", label: "Senior Software Engineer", prompt: "You are a senior software engineer. Focus on clean code, design patterns, security, and performance." },
+  { id: "analyst", label: "Data Analyst", prompt: "You are an expert data analyst. Focus on structured data, SQL queries, metrics, insights, and data visualization." },
+  { id: "writer", label: "Creative Writer", prompt: "You are a skilled creative writer and editor. Use engaging tone, rich phrasing, and polished narrative structure." }
+];
+
