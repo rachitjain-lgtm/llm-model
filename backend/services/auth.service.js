@@ -80,6 +80,85 @@ const loginUser = async ({ email, password }) => {
   };
 };
 
+/**
+ * Google OAuth login/register:
+ * Accepts a Google ID token (credential from @react-oauth/google),
+ * verifies it via Google tokeninfo endpoint, and creates or finds the user.
+ */
+const googleLoginUser = async ({ credential }) => {
+  if (!credential) {
+    throw new Error('Google credential is required');
+  }
+
+  // Verify the Google ID token via Google's tokeninfo endpoint
+  const tokenInfoRes = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${credential}`);
+  const tokenInfo = await tokenInfoRes.json();
+
+  if (!tokenInfoRes.ok || tokenInfo.error) {
+    throw new Error('Invalid Google token. Please try again.');
+  }
+
+  const { email, name, picture, sub: googleId } = tokenInfo;
+
+  if (!email) {
+    throw new Error('Could not retrieve email from Google account.');
+  }
+
+  const db = getDb();
+  const usersCollection = db.collection('users');
+  const refreshTokensCollection = db.collection('refresh_tokens');
+
+  // Find or create user
+  let user = await usersCollection.findOne({ email: email.toLowerCase() });
+
+  if (!user) {
+    // Register new user via Google
+    const newUser = {
+      name: name || email.split('@')[0],
+      email: email.toLowerCase(),
+      googleId,
+      avatar: picture || null,
+      role: 'user',
+      provider: 'google',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    const result = await usersCollection.insertOne(newUser);
+    user = { ...newUser, _id: result.insertedId };
+  } else if (!user.googleId) {
+    // Link Google to existing account
+    await usersCollection.updateOne(
+      { _id: user._id },
+      { $set: { googleId, avatar: picture || user.avatar, updatedAt: new Date() } }
+    );
+  }
+
+  const userId = user._id.toString();
+  const accessToken = generateAccessToken(userId);
+  const refreshToken = generateRefreshToken(userId);
+
+  const expiresAt = new Date();
+  expiresAt.setDate(expiresAt.getDate() + 7);
+  await refreshTokensCollection.insertOne({
+    userId: user._id,
+    token: refreshToken,
+    expiresAt,
+    createdAt: new Date(),
+  });
+
+  return {
+    user: {
+      id: userId,
+      name: user.name,
+      email: user.email,
+      avatar: user.avatar || picture || null,
+      role: user.role || 'user',
+    },
+    accessToken,
+    refreshToken,
+  };
+};
+
 const refreshAuthToken = async (incomingRefreshToken) => {
   if (!incomingRefreshToken) {
     throw new Error('Refresh token is required');
@@ -110,6 +189,7 @@ const logoutUser = async (incomingRefreshToken) => {
 module.exports = {
   registerUser,
   loginUser,
+  googleLoginUser,
   refreshAuthToken,
   logoutUser,
 };
