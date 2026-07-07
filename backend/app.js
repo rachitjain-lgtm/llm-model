@@ -25,6 +25,10 @@ app.use('/api/chats', chatRoutes);
 const generateRoutes = require('./routes/generate.routes');
 app.use('/api/generate', generateRoutes);
 
+// Upload Routes
+const uploadRoutes = require('./routes/upload.routes');
+app.use('/api/upload', uploadRoutes);
+
 // Basic Error Handler
 app.use((err, req, res, next) => {
   console.error(err.stack);

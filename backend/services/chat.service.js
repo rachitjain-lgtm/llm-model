@@ -107,6 +107,9 @@ const getUserChats = async (userId, userEmail) => {
           sender: m.sender,
           text: m.content,
           imageUrl: m.imageUrl,
+          isSvg: m.isSvg || false,
+          svgContent: m.svgContent || null,
+          attachments: m.attachments || null,
           tokens: m.tokens || 0,
           time: new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         })),
@@ -136,6 +139,9 @@ const getChatById = async (chatId, userId) => {
       sender: m.sender,
       text: m.content,
       imageUrl: m.imageUrl,
+      isSvg: m.isSvg || false,
+      svgContent: m.svgContent || null,
+      attachments: m.attachments || null,
       tokens: m.tokens || 0,
       time: new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     })),
@@ -227,7 +233,7 @@ const deleteChat = async (chatId, userId) => {
   return true;
 };
 
-const addMessageToChat = async (chatId, userId, { sender, content, tokens, imageUrl }) => {
+const addMessageToChat = async (chatId, userId, { sender, content, tokens, imageUrl, attachments, isSvg, svgContent }) => {
   const db = getDb();
   const objChatId = toObjectId(chatId);
 
@@ -237,6 +243,9 @@ const addMessageToChat = async (chatId, userId, { sender, content, tokens, image
       sender,
       text: content,
       imageUrl,
+      isSvg: isSvg || false,
+      svgContent: svgContent || null,
+      attachments: attachments || null,
       tokens: tokens || 0,
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     };
@@ -247,6 +256,9 @@ const addMessageToChat = async (chatId, userId, { sender, content, tokens, image
     sender,
     content,
     imageUrl,
+    isSvg: isSvg || false,
+    svgContent: svgContent || null,
+    attachments: attachments || null,
     tokens: tokens || 0,
     createdAt: new Date(),
   };
@@ -263,6 +275,8 @@ const addMessageToChat = async (chatId, userId, { sender, content, tokens, image
     sender: newMessage.sender,
     text: newMessage.content,
     imageUrl: newMessage.imageUrl,
+    isSvg: newMessage.isSvg,
+    svgContent: newMessage.svgContent,
     tokens: newMessage.tokens,
     time: new Date(newMessage.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
   };
@@ -315,6 +329,7 @@ const generateChatResponse = async (chatId, userId, payload) => {
   const response = await llmService.generateResponse({
     model: payload.model || chat?.model || 'google/gemini-2.5-flash',
     prompt: payload.prompt,
+    attachments: payload.attachments || [],
     chatHistory,
     otherChatsSummary,
     temperature: payload.temperature ?? chat?.settings?.temperature ?? 0.7,
@@ -381,6 +396,7 @@ const generateStreamChatResponse = async (chatId, userId, payload, onChunk) => {
   const response = await llmService.generateStreamResponse({
     model: payload.model || chat?.model || 'google/gemini-2.5-flash',
     prompt: payload.prompt,
+    attachments: payload.attachments || [],
     chatHistory,
     otherChatsSummary,
     temperature: payload.temperature ?? chat?.settings?.temperature ?? 0.7,
