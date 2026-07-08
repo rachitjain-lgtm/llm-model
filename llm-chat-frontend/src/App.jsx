@@ -9,6 +9,7 @@ import PromptLibraryModal from "./components/PromptLibraryModal";
 import Login from "./components/Login";
 import { setSidebarOpen } from "./store/uiSlice";
 import { fetchChats } from "./store/chatSlice";
+import { logout } from "./store/authSlice";
 
 function App() {
   const dispatch = useDispatch();
@@ -21,6 +22,37 @@ function App() {
     if (isAuthenticated) {
       dispatch(fetchChats());
     }
+  }, [isAuthenticated, dispatch]);
+
+  // Idle Activity Logout: logout after 15 minutes of inactivity
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    let timeoutId;
+    const IDLE_TIMEOUT_MS = 15 * 60 * 1000; // 15 minutes
+
+    const resetIdleTimer = () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        console.log("User has been idle for 15 minutes. Logging out...");
+        dispatch(logout());
+      }, IDLE_TIMEOUT_MS);
+    };
+
+    const activityEvents = ["mousemove", "keydown", "click", "scroll", "touchstart"];
+
+    resetIdleTimer();
+
+    activityEvents.forEach((event) => {
+      window.addEventListener(event, resetIdleTimer);
+    });
+
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      activityEvents.forEach((event) => {
+        window.removeEventListener(event, resetIdleTimer);
+      });
+    };
   }, [isAuthenticated, dispatch]);
 
   useEffect(() => {

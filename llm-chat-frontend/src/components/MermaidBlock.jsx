@@ -5,6 +5,123 @@ import { Code, BarChart3, RotateCcw, ZoomIn, ZoomOut, Download } from "lucide-re
 let mermaidInitialized = false;
 let mermaidIdCounter = 0;
 
+/**
+ * Quotes an unquoted Mermaid node label inside its bracket.
+ * Handles: id[label], id{label}, id(label)
+ * Only triggers when bracket IMMEDIATELY follows the identifier (no space),
+ * so it doesn't corrupt edge-label text like `-- No -->`.
+ * Uses depth-tracking to correctly handle nested brackets
+ * (e.g. H{arr[mid] == Target?} or G[Calculate (low+high)/2]).
+ */
+const quoteNodeLabels = (line) => {
+  let result = "";
+  let i = 0;
+  const OPEN_BRACKETS = new Set(["[", "{", "("]);
+
+  while (i < line.length) {
+    const ch = line[i];
+
+    // Try to match a potential node identifier: starts with letter or _
+    if (/[A-Za-z_]/.test(ch)) {
+      const idStart = i;
+      // Read the full identifier
+      while (i < line.length && /[A-Za-z0-9_]/.test(line[i])) i++;
+      const id = line.slice(idStart, i);
+
+      // A node definition has the bracket IMMEDIATELY after the id (no space).
+      // Edge-label words like "No" in "-- No -->" are followed by a space/dash, not a bracket.
+      if (i < line.length && OPEN_BRACKETS.has(line[i])) {
+        const open = line[i];
+        const close = open === "[" ? "]" : open === "{" ? "}" : ")";
+        i++; // consume opening bracket
+
+        // Read the label content, tracking depth for the SAME bracket type.
+        let label = "";
+        let depth = 1;
+        while (i < line.length && depth > 0) {
+          if (line[i] === open) {
+            depth++;
+            label += line[i];
+          } else if (line[i] === close) {
+            depth--;
+            if (depth > 0) label += line[i]; // inner close bracket → part of label
+          } else {
+            label += line[i];
+          }
+          i++;
+        }
+        // i now points past the final close bracket
+
+        // Only re-wrap if NOT already fully quoted
+        if (label.startsWith('"') && label.endsWith('"')) {
+          result += id + open + label + close;
+        } else {
+          // Escape any stray quotes inside the label then wrap
+          const escaped = label.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+          result += id + open + '"' + escaped + '"' + close;
+        }
+      } else {
+        // Plain word (keyword, arrow segment, etc.) — copy verbatim
+        result += id;
+      }
+    } else {
+      result += ch;
+      i++;
+    }
+  }
+
+  return result;
+};
+
+const sanitizeMermaidCode = (code) => {
+  if (!code) return "";
+  let sanitized = code.trim();
+
+  // 1. Remove markdown wrapper syntax if present inside the code block itself
+  if (sanitized.startsWith("```")) {
+    sanitized = sanitized.replace(/^```[a-zA-Z0-9]*\n/, "").replace(/\n```$/, "");
+  }
+
+  // 2. Remove "mermaid" label from the start
+  sanitized = sanitized.replace(/^mermaid\s*[\n\r]/i, "");
+
+  // 3. Normalize direction declarations (e.g. td → TD, lr → LR)
+  sanitized = sanitized.replace(/^(flowchart|graph)\s+([a-zA-Z2-9]+)/i, (m, type, dir) => {
+    return `${type.toLowerCase()} ${dir.toUpperCase()}`;
+  });
+
+  // 4. Fix invalid arrow formats
+  if (/^(flowchart|graph)\s+/i.test(sanitized)) {
+    sanitized = sanitized.replace(/\s+---\|>\s+/g, " --> ");
+    sanitized = sanitized.replace(/\s+---\|\s+/g, " --> ");
+    // Replace bare -> but not already --> (negative lookbehind/ahead)
+    sanitized = sanitized.replace(/([^-])->([^>])/g, "$1-->$2");
+  }
+
+  // 5. Quote unquoted node labels — line-by-line, character-level parser
+  //    Only applies to flowchart/graph diagrams.
+  if (/^(flowchart|graph)\s+/i.test(sanitized)) {
+    const lines = sanitized.split("\n");
+    sanitized = lines
+      .map((line, idx) => (idx === 0 ? line : quoteNodeLabels(line)))
+      .join("\n");
+  }
+
+  // 6. xychart-beta: strip invalid --> "label" suffixes after bar/line data.
+  //    LLMs sometimes generate: bar [1, 2, 3] --> "Series Name"
+  //    The correct xychart-beta syntax has NO labels after data arrays.
+  if (/^xychart-beta/i.test(sanitized)) {
+    sanitized = sanitized
+      // Remove: --> "anything" or -> "anything" after the closing ]
+      .replace(/((?:bar|line)\s*\[[^\]]*\])\s*-+>?\s*"[^"]*"/gi, "$1")
+      // Remove bare --> or -> leftovers on bar/line lines
+      .replace(/((?:bar|line)\s*\[[^\]]*\])\s*-+>?\s*/gi, "$1");
+  }
+
+  return sanitized.trim();
+};
+
+
 function initMermaid(isDark) {
   mermaid.initialize({
     startOnLoad: false,
@@ -24,7 +141,8 @@ function initMermaid(isDark) {
           clusterBkg: "#1A1D21",
           titleColor: "#eceff1",
           edgeLabelBackground: "#1A1D21",
-          fontSize: "14px",
+          fontSize: "16px",
+          fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
         }
       : {
           primaryColor: "#245955",
@@ -33,11 +151,13 @@ function initMermaid(isDark) {
           lineColor: "#555",
           secondaryColor: "#E7F3F1",
           tertiaryColor: "#f5f5f5",
-          fontSize: "14px",
+          fontSize: "16px",
+          fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
         },
     flowchart: { htmlLabels: true, curve: "basis" },
     sequence: { actorMargin: 50, messageMargin: 40 },
     securityLevel: "loose",
+    suppressErrorRendering: true,
   });
   mermaidInitialized = true;
 }
@@ -57,18 +177,46 @@ export default function MermaidBlock({ code }) {
 
     let cancelled = false;
 
+    const cleanup = () => {
+      const el = document.getElementById(idRef.current) || document.getElementById(`d${idRef.current}`);
+      if (el) el.remove();
+      document.querySelectorAll(".mermaidTooltip, [id^='d-mermaid-']").forEach(e => e.remove());
+    };
+
     const render = async () => {
       try {
         initMermaid(isDark);
-        const { svg } = await mermaid.render(idRef.current, code.trim());
+        const sanitizedCode = sanitizeMermaidCode(code);
+        console.debug("[Mermaid] rendering:\n", sanitizedCode);
+        const { svg } = await mermaid.render(idRef.current, sanitizedCode);
         if (!cancelled) {
           setSvgContent(svg);
           setError(null);
         }
-      } catch (err) {
-        if (!cancelled) {
-          setError("Could not render diagram. Check diagram syntax.");
-          console.error("Mermaid error:", err);
+      } catch (firstErr) {
+        console.warn("[Mermaid] first render failed, trying aggressive fallback:", firstErr.message);
+        cleanup();
+        // Aggressive fallback: strip ALL node labels down to safe plain-text only
+        try {
+          const raw = sanitizeMermaidCode(code);
+          // Strip any remaining unquoted labels by removing special chars inside brackets
+          const fallback = raw
+            .replace(/\["([^"\n]*)"\]/g, (_, l) => `["${l.replace(/[<>=!?]/g, "")}"]`)
+            .replace(/\{"([^"\n]*)"\}/g, (_, l) => `{"${l.replace(/[<>=!?\[\]]/g, "")}"}`)
+            .replace(/;/g, "") // remove trailing semicolons
+            .trim();
+          idRef.current = `mermaid-${++mermaidIdCounter}-${Date.now()}`;
+          const { svg } = await mermaid.render(idRef.current, fallback);
+          if (!cancelled) {
+            setSvgContent(svg);
+            setError(null);
+          }
+        } catch (secondErr) {
+          if (!cancelled) {
+            console.error("[Mermaid] both render attempts failed:", secondErr);
+            setError(sanitizeMermaidCode(code));
+            cleanup();
+          }
         }
       }
     };
@@ -184,8 +332,9 @@ export default function MermaidBlock({ code }) {
         {showSource ? (
           <pre className="text-[12px] font-mono text-[#333] dark:text-[#ccc] leading-relaxed whitespace-pre-wrap">{code}</pre>
         ) : error ? (
-          <div className="flex items-center gap-2 text-rose-500 text-xs py-4">
-            <span>⚠️ {error}</span>
+          <div className="flex flex-col gap-2 py-2">
+            <p className="text-[11px] text-amber-500 font-semibold">⚠️ Diagram syntax error — showing sanitized source:</p>
+            <pre className="text-[11px] font-mono text-[#333] dark:text-[#ccc] leading-relaxed whitespace-pre-wrap bg-[#F5F7F7] dark:bg-[#1A1D21] rounded-lg p-3 overflow-auto">{error}</pre>
           </div>
         ) : svgContent ? (
           <div

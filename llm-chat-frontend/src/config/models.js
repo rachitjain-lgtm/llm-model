@@ -33,6 +33,26 @@ export const MODEL_OPTIONS = [
     id: "qwen/qwen3-coder",
     label: "Qwen 3 Coder",
     provider: "OpenRouter"
+  },
+  {
+    id: "qwen/qwen3-vl-32b-instruct",
+    label: "Qwen 3 VL (Vision)",
+    provider: "OpenRouter"
+  },
+  {
+    id: "nvidia/llama-3.1-nemotron-70b-instruct",
+    label: "Nemotron 70B (NVIDIA)",
+    provider: "NVIDIA"
+  },
+  {
+    id: "meta/llama-3.3-70b-instruct",
+    label: "Llama 3.3 70B (NVIDIA)",
+    provider: "NVIDIA"
+  },
+  {
+    id: "meta/llama-3.2-11b-vision-instruct",
+    label: "Llama 3.2 Vision (NVIDIA)",
+    provider: "NVIDIA"
   }
 ];
 

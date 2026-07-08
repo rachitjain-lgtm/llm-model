@@ -15,7 +15,7 @@ export default function FabricEditorModal({ imageUrl, onClose }) {
 
   // Dynamically load fabric.js
   useEffect(() => {
-    import("fabric").then(({ fabric }) => {
+    import("fabric").then((fabric) => {
       if (!canvasRef.current) return;
 
       const canvas = new fabric.Canvas(canvasRef.current, {
@@ -28,19 +28,25 @@ export default function FabricEditorModal({ imageUrl, onClose }) {
 
       // Load image if provided
       if (imageUrl) {
-        fabric.Image.fromURL(imageUrl, (img) => {
-          const scale = Math.min(800 / img.width, 500 / img.height, 1);
-          img.scale(scale);
-          img.set({ left: (800 - img.width * scale) / 2, top: (500 - img.height * scale) / 2, selectable: true });
-          canvas.add(img);
-          canvas.renderAll();
-          saveHistory(canvas);
-        }, { crossOrigin: "anonymous" });
+        fabric.FabricImage.fromURL(imageUrl, { crossOrigin: "anonymous" })
+          .then((img) => {
+            const scale = Math.min(800 / img.width, 500 / img.height, 1);
+            img.scale(scale);
+            img.set({ left: (800 - img.width * scale) / 2, top: (500 - img.height * scale) / 2, selectable: true });
+            canvas.add(img);
+            canvas.renderAll();
+            saveHistory(canvas);
+            setFabricLoaded(true);
+          })
+          .catch((err) => {
+            console.error("Failed to load image in Fabric:", err);
+            saveHistory(canvas);
+            setFabricLoaded(true);
+          });
       } else {
         saveHistory(canvas);
+        setFabricLoaded(true);
       }
-
-      setFabricLoaded(true);
 
       return () => canvas.dispose();
     });

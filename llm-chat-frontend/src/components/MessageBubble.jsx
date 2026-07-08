@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, lazy, Suspense } from "react";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
+import { useSelector } from "react-redux";
 import { 
   ThumbsUp, 
   ThumbsDown, 
@@ -39,6 +40,11 @@ const DiagramLoader = () => (
 
 export default function MessageBubble({ message, onEditMessage, onRegenerate, isLastAssistant }) {
   const { id, sender, text, time, initials, sources, attachments, imageUrl } = message;
+  const user = useSelector(state => state.auth.user);
+  const userInitials = user && user.name 
+    ? user.name.split(" ").map(n => n[0]).join("").substring(0, 2).toUpperCase() 
+    : (user && user.email ? user.email.substring(0, 2).toUpperCase() : "U");
+
   const [copied, setCopied] = useState(false);
   const [voted, setVoted] = useState(null); // 'up' or 'down'
   const [isEditing, setIsEditing] = useState(false);
@@ -179,16 +185,52 @@ export default function MessageBubble({ message, onEditMessage, onRegenerate, is
   // Main Markdown parsing logic
   const renderContent = (content) => {
     if (!content) return null;
-    
-    // Split code blocks out
-    const blocks = content.split(/(```[\s\S]*?```)/g);
-    
-    return blocks.map((block, idx) => {
-      if (block.startsWith("```")) {
-        const codeLines = block.split("\n");
-        const language = codeLines[0].replace("```", "").trim();
-        const code = codeLines.slice(1, -1).join("\n");
-        const langClean = (language || "text").toLowerCase();
+
+    // ── Robust line-by-line block parser ──────────────────────────────────────
+    // Avoids regex splitting which breaks when multiple code blocks are adjacent
+    const segments = [];
+    const lines = content.split("\n");
+    let inCode = false;
+    let lang = "";
+    let codeLines = [];
+    let textLines = [];
+
+    const flushText = () => {
+      if (textLines.length > 0) {
+        segments.push({ type: "text", content: textLines.join("\n") });
+        textLines = [];
+      }
+    };
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      if (!inCode && line.startsWith("```")) {
+        flushText();
+        inCode = true;
+        lang = line.slice(3).trim().toLowerCase();
+        codeLines = [];
+      } else if (inCode && line.startsWith("```")) {
+        inCode = false;
+        segments.push({ type: "code", lang, code: codeLines.join("\n") });
+        lang = "";
+        codeLines = [];
+      } else if (inCode) {
+        codeLines.push(line);
+      } else {
+        textLines.push(line);
+      }
+    }
+
+    // Flush any remaining open code block or trailing text
+    if (inCode && codeLines.length > 0) {
+      segments.push({ type: "code", lang, code: codeLines.join("\n") });
+    }
+    flushText();
+    // ─────────────────────────────────────────────────────────────────────────
+
+    return segments.map((seg, idx) => {
+      if (seg.type === "code") {
+        const { lang: langClean, code } = seg;
 
         // ── Mermaid diagrams ──
         if (langClean === "mermaid") {
@@ -212,7 +254,7 @@ export default function MessageBubble({ message, onEditMessage, onRegenerate, is
         if (langClean === "svg" || (langClean === "xml" && code.trim().toLowerCase().startsWith("<svg"))) {
           return (
             <Suspense key={idx} fallback={<DiagramLoader />}>
-              <SvgBlock key={idx} code={code} />
+              <SvgBlock key={idx} code={code} onEditInCanvas={(blobUrl) => setFabricEditorImage(blobUrl)} />
             </Suspense>
           );
         }
@@ -221,7 +263,7 @@ export default function MessageBubble({ message, onEditMessage, onRegenerate, is
           <div key={idx} className="my-4 rounded-xl overflow-hidden border border-[#2E3236] shadow-md bg-[#1E1E1E]">
             {/* Header bar with Language indicator & Copy Code Button */}
             <div className="flex justify-between items-center px-4 py-2 bg-[#252526] text-[10px] uppercase tracking-wider text-[#9CDCFE] font-mono border-b border-[#333333] select-none">
-              <span className="font-semibold text-[11px] text-[#D4D4D4] lowercase">{language || "code"}</span>
+              <span className="font-semibold text-[11px] text-[#D4D4D4] lowercase">{langClean || "code"}</span>
               <button
                 type="button"
                 onClick={() => handleCopyCode(code, idx)}
@@ -259,12 +301,12 @@ export default function MessageBubble({ message, onEditMessage, onRegenerate, is
           </div>
         );
       }
-      
-      // Process standard blocks line by line
-      const lines = block.split("\n");
+
+      // ── Plain text / markdown segment ──
+      const textLineArr = seg.content.split("\n");
       return (
         <div key={idx} className="space-y-3">
-          {lines.map((line, lineIdx) => {
+          {textLineArr.map((line, lineIdx) => {
             // Headers
             if (line.startsWith("### ")) {
               return <h4 key={lineIdx} className="text-xs font-bold text-[#171717] dark:text-[#eceff1] mt-4 font-montserrat transition-colors">{line.slice(4)}</h4>;
@@ -275,7 +317,7 @@ export default function MessageBubble({ message, onEditMessage, onRegenerate, is
             if (line.startsWith("# ")) {
               return <h2 key={lineIdx} className="text-base font-bold text-[#171717] dark:text-[#eceff1] mt-6 font-montserrat transition-colors">{line.slice(2)}</h2>;
             }
-            
+
             // Bullet Lists
             if (line.trim().startsWith("* ") || line.trim().startsWith("- ")) {
               const cleanLine = line.trim().slice(2);
@@ -285,7 +327,7 @@ export default function MessageBubble({ message, onEditMessage, onRegenerate, is
                 </ul>
               );
             }
-            
+
             // Numbered Lists
             if (/^\d+\.\s/.test(line.trim())) {
               const match = line.trim().match(/^(\d+)\.\s(.*)/);
@@ -297,12 +339,12 @@ export default function MessageBubble({ message, onEditMessage, onRegenerate, is
                 );
               }
             }
-            
+
             // Empty line spacer
             if (line.trim() === "") {
               return <div key={lineIdx} className="h-1" />;
             }
-            
+
             // Normal paragraph text
             return (
               <p key={lineIdx} className="text-xs leading-relaxed text-[#171717] dark:text-[#eceff1] text-justify font-sans transition-colors">
@@ -323,11 +365,11 @@ export default function MessageBubble({ message, onEditMessage, onRegenerate, is
       {/* Avatar */}
       {isUser ? (
         <div className="w-8 h-8 rounded-full bg-[#185e59] text-white flex items-center justify-center text-xs font-bold font-montserrat flex-shrink-0 shadow-sm select-none">
-          {initials || "AR"}
+          {userInitials}
         </div>
       ) : (
-        <div className="w-8 h-8 rounded bg-[#245955] text-white flex items-center justify-center text-sm font-bold font-montserrat flex-shrink-0 shadow-sm select-none">
-          B
+        <div className="w-8 h-8 rounded bg-[#245955] text-white flex items-center justify-center text-xs font-bold font-montserrat flex-shrink-0 shadow-sm select-none">
+          AS
         </div>
       )}
 
@@ -383,7 +425,7 @@ export default function MessageBubble({ message, onEditMessage, onRegenerate, is
           {/* Render AI-Generated SVG Illustration */}
           {message.isSvg && message.svgContent && (
             <Suspense fallback={<DiagramLoader />}>
-              <SvgBlock code={message.svgContent} />
+              <SvgBlock code={message.svgContent} onEditInCanvas={(blobUrl) => setFabricEditorImage(blobUrl)} />
             </Suspense>
           )}
 

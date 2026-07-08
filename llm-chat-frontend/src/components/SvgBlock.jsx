@@ -1,19 +1,24 @@
 import { useState } from "react";
-import { ImageIcon, Code, Download, ZoomIn, ZoomOut, RotateCcw } from "lucide-react";
+import { ImageIcon, Code, Download, ZoomIn, ZoomOut, RotateCcw, Pencil } from "lucide-react";
 
-export default function SvgBlock({ code }) {
+export default function SvgBlock({ code, onEditInCanvas }) {
   const [showSource, setShowSource] = useState(false);
   const [zoom, setZoom] = useState(1);
 
   // Clean up the SVG — strip code fences if present
-  const svgCode = code.trim()
+  let svgCode = (code || "").trim()
     .replace(/^```svg\n?/, "")
     .replace(/^```xml\n?/, "")
     .replace(/```$/, "")
     .trim();
 
+  // Ensure xmlns is present on the root <svg> tag for correct browser parsing and rendering
+  if (svgCode.toLowerCase().includes("<svg") && !/xmlns\s*=\s*/i.test(svgCode)) {
+    svgCode = svgCode.replace(/<svg/i, '<svg xmlns="http://www.w3.org/2000/svg"');
+  }
+
   const handleDownload = () => {
-    const blob = new Blob([svgCode], { type: "image/svg+xml" });
+    const blob = new Blob([svgCode], { type: "image/svg+xml;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -26,26 +31,45 @@ export default function SvgBlock({ code }) {
     const img = new Image();
     const blob = new Blob([svgCode], { type: "image/svg+xml;charset=utf-8" });
     const url = URL.createObjectURL(blob);
+
     img.onload = () => {
       const canvas = document.createElement("canvas");
-      canvas.width = img.naturalWidth * 2 || 800;
-      canvas.height = img.naturalHeight * 2 || 600;
+      // Use SVG width/height or default to standard size
+      canvas.width = img.naturalWidth * 2 || 1200;
+      canvas.height = img.naturalHeight * 2 || 1200;
       const ctx = canvas.getContext("2d");
       ctx.fillStyle = "#ffffff";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       ctx.scale(2, 2);
       ctx.drawImage(img, 0, 0);
+
       canvas.toBlob((pngBlob) => {
-        const pngUrl = URL.createObjectURL(pngBlob);
-        const a = document.createElement("a");
-        a.href = pngUrl;
-        a.download = "generated.png";
-        a.click();
-        URL.revokeObjectURL(pngUrl);
-      });
+        if (pngBlob) {
+          const pngUrl = URL.createObjectURL(pngBlob);
+          const a = document.createElement("a");
+          a.href = pngUrl;
+          a.download = "generated.png";
+          a.click();
+          URL.revokeObjectURL(pngUrl);
+        }
+        URL.revokeObjectURL(url);
+      }, "image/png");
+    };
+
+    img.onerror = (err) => {
+      console.error("Failed to render PNG from SVG blob:", err);
+      alert("PNG generation failed. Try opening the SVG file and saving it manually.");
       URL.revokeObjectURL(url);
     };
+
     img.src = url;
+  };
+
+  const handleEditInCanvas = () => {
+    if (!onEditInCanvas) return;
+    const blob = new Blob([svgCode], { type: "image/svg+xml;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    onEditInCanvas(url);
   };
 
   const isValidSvg = svgCode.toLowerCase().includes("<svg");
@@ -68,6 +92,12 @@ export default function SvgBlock({ code }) {
               <div className="w-px h-4 bg-[#E5E5E5] dark:bg-[#2D3136] mx-1" />
               <button onClick={handleDownload} className="p-1 rounded hover:bg-[#E7F3F1] dark:hover:bg-[#23272A] text-[#737373] dark:text-[#94A3B8] transition-colors text-[10px] flex items-center gap-1" title="Download SVG"><Download size={11} /><span>SVG</span></button>
               <button onClick={handleDownloadPng} className="p-1 rounded hover:bg-[#E7F3F1] dark:hover:bg-[#23272A] text-[#737373] dark:text-[#94A3B8] transition-colors text-[10px] flex items-center gap-1" title="Download PNG"><Download size={11} /><span>PNG</span></button>
+              {onEditInCanvas && (
+                <>
+                  <div className="w-px h-4 bg-[#E5E5E5] dark:bg-[#2D3136] mx-1" />
+                  <button onClick={handleEditInCanvas} className="p-1 rounded hover:bg-[#E7F3F1] dark:hover:bg-[#23272A] text-[#245955] dark:text-[#347d78] transition-colors text-[10px] flex items-center gap-1 font-semibold" title="Edit in Canvas"><Pencil size={11} /><span>Edit</span></button>
+                </>
+              )}
               <div className="w-px h-4 bg-[#E5E5E5] dark:bg-[#2D3136] mx-1" />
             </>
           )}

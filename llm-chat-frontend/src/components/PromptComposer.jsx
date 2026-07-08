@@ -18,8 +18,10 @@ import {
   MicOff,
   Square,
   Globe,
-  UserCheck
+  UserCheck,
+  Loader
 } from "lucide-react";
+import axiosClient from "../api/axiosClient";
 import { AI_PERSONAS } from "../config/models";
 import { 
   addMessage, 
@@ -178,32 +180,95 @@ export default function PromptComposer() {
   };
 
   // Process files selected via file input or drop
-  const handleAddFiles = async (files) => {
+  const handleAddFiles = (files) => {
     const fileArray = Array.from(files);
-    const newAttachments = await Promise.all(
-      fileArray.map(async (file) => {
-        const isImage = file.type.startsWith("image/");
+    
+    // Create attachment structures immediately with isParsing state
+    const newAttachments = fileArray.map((file) => {
+      const isImage = file.type.startsWith("image/");
+      const id = `att-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+      return {
+        id,
+        name: file.name,
+        size: formatFileSize(file.size),
+        type: file.type,
+        isImage,
+        textContent: null,
+        isParsing: !isImage, // Only parse text/binary files, not images
+        error: null,
+        previewUrl: isImage ? URL.createObjectURL(file) : null
+      };
+    });
+
+    setAttachments(prev => [...prev, ...newAttachments]);
+
+    // Asynchronously process each file
+    newAttachments.forEach(async (att, idx) => {
+      const file = fileArray[idx];
+      
+      if (att.isImage) {
+        try {
+          const base64 = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+          });
+          setAttachments(prev =>
+            prev.map(item =>
+              item.id === att.id
+                ? { ...item, base64 }
+                : item
+            )
+          );
+        } catch (err) {
+          console.error("Failed to read image as base64:", err);
+        }
+        return;
+      }
+
+      try {
         let textContent = null;
-        if (!isImage && (file.type.startsWith("text/") || file.name.match(/\.(txt|md|json|js|jsx|ts|tsx|py|csv|html|css|sql|xml|yaml|yml)$/i))) {
-          try {
-            textContent = await file.text();
-          } catch (e) {
-            console.error("Could not read text content from file:", e);
+        
+        // Check if it is a standard text file
+        if (file.type.startsWith("text/") || file.name.match(/\.(txt|md|json|js|jsx|ts|tsx|py|csv|html|css|sql|xml|yaml|yml)$/i)) {
+          textContent = await file.text();
+        } else {
+          // Send binary files (PDF, DOCX, XLSX) to backend parser
+          const formData = new FormData();
+          formData.append("file", file);
+
+          const res = await axiosClient.post("/upload", formData, {
+            headers: {
+              "Content-Type": "multipart/form-data"
+            }
+          });
+
+          if (res.data && res.data.success) {
+            textContent = res.data.text;
+          } else {
+            throw new Error(res.data?.message || "Failed to parse file");
           }
         }
 
-        return {
-          id: `att-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
-          name: file.name,
-          size: formatFileSize(file.size),
-          type: file.type,
-          isImage,
-          textContent,
-          previewUrl: isImage ? URL.createObjectURL(file) : null
-        };
-      })
-    );
-    setAttachments(prev => [...prev, ...newAttachments]);
+        setAttachments(prev =>
+          prev.map(item =>
+            item.id === att.id
+              ? { ...item, textContent, isParsing: false }
+              : item
+          )
+        );
+      } catch (err) {
+        console.error("Could not read text content from file:", err);
+        setAttachments(prev =>
+          prev.map(item =>
+            item.id === att.id
+              ? { ...item, isParsing: false, error: err.message || "Failed to parse file" }
+              : item
+          )
+        );
+      }
+    });
   };
 
   const handleFileChange = (e) => {
@@ -245,7 +310,7 @@ export default function PromptComposer() {
   };
 
   const handleSend = async () => {
-    if ((!inputText.trim() && attachments.length === 0) || isLoading) return;
+    if ((!inputText.trim() && attachments.length === 0) || isLoading || attachments.some(a => a.isParsing)) return;
 
     const userMessageText = inputText.trim();
     const currentAttachments = [...attachments];
@@ -284,25 +349,20 @@ export default function PromptComposer() {
     // 2. Set loading state
     dispatch(setLoading(true));
 
-    // Construct prompt sent to API including attachment names and text contents
-    let fullPrompt = userMessageText;
-    if (currentAttachments.length > 0) {
-      const fileListStr = currentAttachments.map(a => {
-        let str = `[Attached File: ${a.name} (${a.size})]`;
-        if (a.textContent) {
-          str += `\n\n--- Start of File (${a.name}) ---\n${a.textContent}\n--- End of File (${a.name}) ---`;
-        }
-        return str;
-      }).join("\n\n");
-      fullPrompt = userMessageText ? `${userMessageText}\n\n${fileListStr}` : fileListStr;
-    }
 
     // Robust detector for Image Generation intents (e.g. "draw a puppy", "generate an image", "create a picture of...")
     const detectImageIntent = (text) => {
       if (!text) return false;
       const clean = text.toLowerCase();
-      const verbs = ["generate", "create", "draw", "paint", "sketch", "render", "make", "produce", "design", "show me"];
-      const nouns = ["image", "picture", "photo", "photograph", "illustration", "painting", "drawing", "sketch", "graphic", "artwork", "visual", "clipart"];
+      const verbs = [
+        "generate", "create", "draw", "paint", "sketch", "render", "make", "produce", "design", "show me",
+        "regenerate", "edit", "modify", "change", "update", "redraw", "alter", "recreate", "make changes to"
+      ];
+      const nouns = [
+        "image", "images", "imaged", "picture", "pictures", "photo", "photos", "photograph", "photographs", 
+        "illustration", "illustrations", "painting", "paintings", "drawing", "drawings", "sketch", "sketches", 
+        "graphic", "graphics", "artwork", "artworks", "visual", "visuals", "clipart", "pic", "pics"
+      ];
       
       // If we see combinations like: "verb ... noun"
       for (const verb of verbs) {
@@ -330,7 +390,8 @@ export default function PromptComposer() {
       return false;
     };
 
-    const isImagePrompt = detectImageIntent(userMessageText);
+    const hasImageAttachment = currentAttachments.some(a => a.isImage);
+    const isImagePrompt = detectImageIntent(userMessageText) && !hasImageAttachment;
 
     if (isImagePrompt) {
       // Save user message to database
@@ -379,7 +440,9 @@ export default function PromptComposer() {
           content: isSvg
             ? `Here is the SVG illustration I created for: *"${userMessageText}"*`
             : `Here is the image I created for: *"${userMessageText}"*`,
-          imageUrl: imageUrl
+          imageUrl: imageUrl,
+          isSvg,
+          svgContent: svgContent || null
         }).catch((err) => console.error("Failed to save assistant message to DB:", err));
 
         dispatch(setLoading(false));
@@ -412,14 +475,27 @@ export default function PromptComposer() {
     abortControllerRef.current = controller;
 
     try {
+      const finalPromptText = userMessageText || (currentAttachments.some(a => a.isImage) ? "Describe this image" : "Analyze the attached document");
+      const structuredAttachments = currentAttachments.map(a => ({
+        name: a.name,
+        size: a.size,
+        type: a.type,
+        isImage: a.isImage,
+        textContent: a.textContent,
+        base64: a.base64 || null,
+        previewUrl: a.base64 || a.previewUrl
+      }));
+
       chatApi.saveMessage(activeChat.id, {
         sender: "user",
-        content: fullPrompt
+        content: finalPromptText,
+        attachments: structuredAttachments
       }).catch((err) => console.error("Failed to save user message to DB:", err));
 
       await chatApi.sendMessageStream({
         conversation: activeChat,
-        prompt: fullPrompt,
+        prompt: finalPromptText,
+        attachments: structuredAttachments,
         streamingOn,
         activeKb,
         signal: controller.signal
@@ -533,7 +609,18 @@ If you're using a free model, double-check that the model ID is still available 
                 
                 <div className="flex flex-col min-w-0 max-w-[140px]">
                   <span className="truncate text-[11px] font-semibold">{att.name}</span>
-                  <span className="text-[9px] text-[#737373] dark:text-[#94A3B8]">{att.size}</span>
+                  <span className={`text-[9px] font-medium ${att.error ? "text-rose-500" : "text-[#737373] dark:text-[#94A3B8]"}`}>
+                    {att.isParsing ? (
+                      <span className="flex items-center gap-1">
+                        <Loader size={8} className="animate-spin text-[#245955] dark:text-[#347d78]" />
+                        Parsing...
+                      </span>
+                    ) : att.error ? (
+                      att.error
+                    ) : (
+                      att.size
+                    )}
+                  </span>
                 </div>
 
                 <button 
