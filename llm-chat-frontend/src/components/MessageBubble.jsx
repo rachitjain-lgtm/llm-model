@@ -358,6 +358,11 @@ export default function MessageBubble({ message, onEditMessage, onRegenerate, is
   };
 
   const isUser = sender === "user";
+  const isEmptyAssistant = !isUser && !text && !imageUrl && (!attachments || attachments.length === 0) && !message.svgContent;
+
+  if (isEmptyAssistant) {
+    return null;
+  }
 
   return (
     <div className={`flex w-full items-start gap-4 mb-6 ${isUser ? "flex-row-reverse" : "flex-row"}`}>
