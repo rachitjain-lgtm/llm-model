@@ -685,25 +685,14 @@ export default function Login() {
                   </p>
                 </div>
 
-                <div className="p-3.5 bg-[#E7F3F1]/50 border border-[#245955]/20 rounded-xl text-left space-y-2.5 my-2">
-                  <div className="text-[11px] font-bold text-[#245955] flex items-center gap-1.5">
-                    <KeyRound size={14} />
-                    <span>Password Reset Link Created</span>
+                <div className="p-3.5 bg-[#E7F3F1]/30 border border-[#245955]/10 rounded-xl text-left space-y-2 my-2">
+                  <div className="text-[11px] font-bold text-[#245955] flex items-center gap-1.5 justify-center">
+                    <KeyRound size={14} className="animate-pulse" />
+                    <span>Check Your Inbox</span>
                   </div>
-                  <p className="text-[10px] text-[#737373] leading-normal">
-                    Click the button below to open your secure password change form:
+                  <p className="text-[10.5px] text-[#737373] text-center leading-relaxed">
+                    A secure password reset link has been dispatched to your email address. Please click the link in your email to safely change your password.
                   </p>
-                  <button
-                    onClick={() => {
-                      setNewPassword("");
-                      setConfirmNewPassword("");
-                      setResetSuccess(false);
-                      setView("reset-password");
-                    }}
-                    className="w-full h-10 bg-[#245955] hover:bg-[#1e4b48] text-white rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-2 shadow-sm"
-                  >
-                    <span>Open Password Change Page</span>
-                  </button>
                 </div>
 
                 <button
