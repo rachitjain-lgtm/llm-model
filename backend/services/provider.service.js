@@ -23,37 +23,6 @@ const BUILTIN_PROFILES = [
     ],
   },
   {
-    id: 'openai',
-    name: 'OpenAI Default',
-    providerType: 'openai',
-    isBuiltin: true,
-    config: {
-      apiKey: process.env.OPENAI_API_KEY || '',
-      apiBaseUrl: process.env.OPENAI_API_URL || 'https://api.openai.com/v1/chat/completions',
-    },
-    models: [
-      { id: 'gpt-4o-mini', label: 'GPT-4o Mini' },
-      { id: 'gpt-4o', label: 'GPT-4o' },
-      { id: 'o3-mini', label: 'o3-mini' },
-    ],
-  },
-  {
-    id: 'azure',
-    name: 'Azure OpenAI Default',
-    providerType: 'azure',
-    isBuiltin: true,
-    config: {
-      endpoint: process.env.AZURE_OPENAI_ENDPOINT || '',
-      apiKey: process.env.AZURE_OPENAI_API_KEY || '',
-      deploymentName: process.env.AZURE_OPENAI_DEPLOYMENT || '',
-      apiVersion: process.env.AZURE_OPENAI_API_VERSION || '2024-06-01',
-    },
-    models: [
-      { id: 'azure-gpt-4o', label: 'GPT-4o' },
-      { id: 'azure-gpt-4o-mini', label: 'GPT-4o Mini' },
-    ],
-  },
-  {
     id: 'nvidia',
     name: 'NVIDIA Default',
     providerType: 'nvidia',
@@ -65,41 +34,8 @@ const BUILTIN_PROFILES = [
     models: [
       { id: 'meta/llama-3.1-8b-instruct', label: 'Llama 3.1 8B' },
       { id: 'meta/llama-3.1-70b-instruct', label: 'Llama 3.1 70B' },
-      { id: 'nvidia/nemotron-4-340b-instruct', label: 'Nemotron 4 340B' },
-    ],
-  },
-  {
-    id: 'aws-bedrock',
-    name: 'AWS Bedrock Default',
-    providerType: 'aws-bedrock',
-    isBuiltin: true,
-    config: {
-      awsRegion: process.env.AWS_REGION || 'us-east-1',
-      accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
-      secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
-      modelId: process.env.BEDROCK_MODEL_ID || 'anthropic.claude-3-5-sonnet',
-      knowledgeBaseId: process.env.KNOWLEDGE_BASE_ID || '',
-      guardrailId: process.env.GUARDRAIL_ID || '',
-    },
-    models: [
-      { id: 'anthropic.claude-3-5-sonnet', label: 'Claude 3.5 Sonnet' },
-      { id: 'meta.llama3-70b-instruct-v1:0', label: 'Llama 3 70B' },
-      { id: 'mistral.mixtral-8x7b-instruct-v0:1', label: 'Mixtral 8x7B' },
-    ],
-  },
-  {
-    id: 'huggingface',
-    name: 'Hugging Face Default',
-    providerType: 'huggingface',
-    isBuiltin: true,
-    config: {
-      apiKey: process.env.HUGGINGFACE_API_KEY || '',
-      apiBaseUrl: process.env.HUGGINGFACE_API_URL || 'https://api-inference.huggingface.co/models',
-    },
-    models: [
-      { id: 'mistralai/Mistral-7B-Instruct-v0.3', label: 'Mistral 7B Instruct' },
-      { id: 'meta-llama/Llama-3.1-8B-Instruct', label: 'Llama 3.1 8B' },
-      { id: 'HuggingFaceH4/zephyr-7b-beta', label: 'Zephyr 7B' },
+      { id: 'meta/llama-3.3-70b-instruct', label: 'Llama 3.3 70B (NVIDIA)' },
+      { id: 'meta/llama-3.2-11b-vision-instruct', label: 'Llama 3.2 Vision (NVIDIA)' },
     ],
   },
 ];

@@ -16,27 +16,6 @@ export const BUILTIN_PROVIDER_PROFILES = [
     ]
   },
   {
-    id: "openai",
-    name: "OpenAI Default",
-    providerType: "openai",
-    isBuiltin: true,
-    models: [
-      { id: "gpt-4o-mini", label: "GPT-4o Mini" },
-      { id: "gpt-4o", label: "GPT-4o" },
-      { id: "o3-mini", label: "o3-mini" }
-    ]
-  },
-  {
-    id: "azure",
-    name: "Azure OpenAI Default",
-    providerType: "azure",
-    isBuiltin: true,
-    models: [
-      { id: "azure-gpt-4o", label: "GPT-4o" },
-      { id: "azure-gpt-4o-mini", label: "GPT-4o Mini" }
-    ]
-  },
-  {
     id: "nvidia",
     name: "NVIDIA Default",
     providerType: "nvidia",
@@ -44,43 +23,15 @@ export const BUILTIN_PROVIDER_PROFILES = [
     models: [
       { id: "meta/llama-3.1-8b-instruct", label: "Llama 3.1 8B" },
       { id: "meta/llama-3.1-70b-instruct", label: "Llama 3.1 70B" },
-      { id: "nvidia/nemotron-4-340b-instruct", label: "Nemotron 4 340B" },
-      { id: "nvidia/llama-3.1-nemotron-70b-instruct", label: "Nemotron 70B (NVIDIA)" },
       { id: "meta/llama-3.3-70b-instruct", label: "Llama 3.3 70B (NVIDIA)" },
       { id: "meta/llama-3.2-11b-vision-instruct", label: "Llama 3.2 Vision (NVIDIA)" }
-    ]
-  },
-  {
-    id: "aws-bedrock",
-    name: "AWS Bedrock Default",
-    providerType: "aws-bedrock",
-    isBuiltin: true,
-    models: [
-      { id: "anthropic.claude-3-5-sonnet", label: "Claude 3.5 Sonnet" },
-      { id: "meta.llama3-70b-instruct-v1:0", label: "Llama 3 70B" },
-      { id: "mistral.mixtral-8x7b-instruct-v0:1", label: "Mixtral 8x7B" }
-    ]
-  },
-  {
-    id: "huggingface",
-    name: "Hugging Face Default",
-    providerType: "huggingface",
-    isBuiltin: true,
-    models: [
-      { id: "mistralai/Mistral-7B-Instruct-v0.3", label: "Mistral 7B Instruct" },
-      { id: "meta-llama/Llama-3.1-8B-Instruct", label: "Llama 3.1 8B" },
-      { id: "HuggingFaceH4/zephyr-7b-beta", label: "Zephyr 7B" }
     ]
   }
 ];
 
 export const PROVIDER_OPTIONS = [
   { id: "openrouter", label: "OpenRouter" },
-  { id: "openai", label: "OpenAI" },
-  { id: "azure", label: "Azure OpenAI" },
-  { id: "nvidia", label: "NVIDIA" },
-  { id: "aws-bedrock", label: "AWS Bedrock" },
-  { id: "huggingface", label: "Hugging Face" }
+  { id: "nvidia", label: "NVIDIA" }
 ];
 
 export const PROVIDER_FIELD_PRESETS = {
@@ -88,25 +39,9 @@ export const PROVIDER_FIELD_PRESETS = {
     fields: ["apiKey", "apiBaseUrl", "appName"],
     label: "OpenRouter",
   },
-  openai: {
-    fields: ["apiKey", "apiBaseUrl"],
-    label: "OpenAI",
-  },
-  azure: {
-    fields: ["endpoint", "apiKey", "deploymentName", "apiVersion"],
-    label: "Azure OpenAI",
-  },
   nvidia: {
     fields: ["apiKey", "apiBaseUrl"],
     label: "NVIDIA",
-  },
-  "aws-bedrock": {
-    fields: ["awsRegion", "accessKeyId", "secretAccessKey", "modelId", "knowledgeBaseId", "guardrailId"],
-    label: "AWS Bedrock",
-  },
-  huggingface: {
-    fields: ["apiKey", "apiBaseUrl"],
-    label: "Hugging Face",
   }
 };
 
