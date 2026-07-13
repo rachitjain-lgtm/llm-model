@@ -282,8 +282,8 @@ export default function Login() {
             user_id: publicKey,
             template_params: {
               to_email: email.trim(),
-              reset_link: resetLink,
-              to_name: email.trim().split('@')[0]
+              USER_NAME: email.trim().split('@')[0],
+              RESET_PASSWORD_LINK: resetLink
             }
           });
           console.log("Email sent successfully via EmailJS!");
