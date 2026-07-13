@@ -38,6 +38,10 @@ export default function Sidebar() {
 
   const handleCreateChat = (e) => {
     if (e) e.stopPropagation();
+    const activeChat = conversations.find(c => c.id === activeId);
+    if (activeChat && (!activeChat.messages || activeChat.messages.length === 0)) {
+      return;
+    }
     dispatch(createChatAsync({ title: "New Conversation" }));
   };
 
