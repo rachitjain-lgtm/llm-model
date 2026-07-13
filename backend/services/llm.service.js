@@ -43,6 +43,31 @@ const DANGEROUS_PATTERNS = [
   /generate (malware|ransomware|keylogger|trojan|phishing script)/i,
 ];
 
+const doesResponseIndicateMissingKnowledge = (text) => {
+  const lowercase = text.toLowerCase();
+  const patterns = [
+    "i don't have real-time",
+    "i do not have real-time",
+    "i don't have access to live",
+    "i do not have access to live",
+    "my knowledge cutoff",
+    "knowledge limit",
+    "cannot browse the internet",
+    "unable to browse the internet",
+    "i don't know the current",
+    "i do not know the current",
+    "i cannot answer this without a web search",
+    "i don't have access to current",
+    "i do not have access to current",
+    "access to current information",
+    "real-time data",
+    "real-time information",
+    "as of my last update",
+    "as of my knowledge cutoff"
+  ];
+  return patterns.some(p => lowercase.includes(p));
+};
+
 const normalizeModelId = (modelId) => {
   if (!modelId) return "google/gemini-2.5-flash";
   if (MODEL_MAPPINGS[modelId]) return MODEL_MAPPINGS[modelId];
@@ -230,59 +255,58 @@ const generateResponse = async ({
 
   const normalizedProvider = resolveProvider(provider, providerProfile);
   const providerClient = getProvider(normalizedProvider);
-  
-  let searchResults = [];
-  let userPromptWithSearch = prompt;
-
-  if (useWebSearch) {
-    const searchObj = await createPromptWithSearch(prompt);
-    searchResults = searchObj.searchResults;
-    userPromptWithSearch = searchObj.userPromptWithSearch;
-  }
 
   const currentImages = attachments ? attachments.filter(a => a.isImage && a.base64) : [];
   const currentDocs = attachments ? attachments.filter(a => !a.isImage && a.textContent) : [];
 
-  let userPromptWithDocs = userPromptWithSearch;
-  if (currentDocs.length > 0) {
-    const targetedDocs = getTargetedDocs(prompt, currentDocs);
-    const targetedNames = new Set(targetedDocs.map(d => d.name));
-    const nonTargeted = currentDocs.filter(d => !targetedNames.has(d.name));
-    
-    let docsText = "";
-    if (nonTargeted.length > 0) {
-      docsText += `\n\n[Additional Attached Files (Not searched for this query to optimize tokens):\n` +
-        nonTargeted.map(d => `- ${d.name} (${d.size})`).join('\n') +
-        `\n(If you need to read any of these files, ask the user to specify them or refer to them directly.)]\n`;
+  const buildPromptWithCustomSearch = (searchRes = [], searchContext = '') => {
+    let userPromptWithSearch = prompt;
+    if (searchRes.length > 0) {
+      userPromptWithSearch += searchContext;
     }
-    
-    docsText += "\n\n" + targetedDocs.map(d => {
-      let text = d.textContent || "";
-      const maxChars = 40000;
-      if (text.length > maxChars) {
-        text = text.substring(0, maxChars) + "\n\n[Content truncated to save tokens...]";
-      }
-      return `[Attached File: ${d.name} (${d.size})]\n--- Start of File ---\n${text}\n--- End of File ---`;
-    }).join("\n\n");
-    
-    userPromptWithDocs += docsText;
-  }
 
-  let finalPrompt = userPromptWithDocs;
-  if (currentImages.length > 0) {
-    const content = [
-      { type: "text", text: userPromptWithDocs }
-    ];
-    currentImages.forEach(img => {
-      content.push({
-        type: "image_url",
-        image_url: {
-          url: img.base64
+    let userPromptWithDocs = userPromptWithSearch;
+    if (currentDocs.length > 0) {
+      const targetedDocs = getTargetedDocs(prompt, currentDocs);
+      const targetedNames = new Set(targetedDocs.map(d => d.name));
+      const nonTargeted = currentDocs.filter(d => !targetedNames.has(d.name));
+      
+      let docsText = "";
+      if (nonTargeted.length > 0) {
+        docsText += `\n\n[Additional Attached Files (Not searched for this query to optimize tokens):\n` +
+          nonTargeted.map(d => `- ${d.name} (${d.size})`).join('\n') +
+          `\n(If you need to read any of these files, ask the user to specify them or refer to them directly.)]\n`;
+      }
+      
+      docsText += "\n\n" + targetedDocs.map(d => {
+        let text = d.textContent || "";
+        const maxChars = 40000;
+        if (text.length > maxChars) {
+          text = text.substring(0, maxChars) + "\n\n[Content truncated to save tokens...]";
         }
+        return `[Attached File: ${d.name} (${d.size})]\n--- Start of File ---\n${text}\n--- End of File ---`;
+      }).join("\n\n");
+      
+      userPromptWithDocs += docsText;
+    }
+
+    let finalPrompt = userPromptWithDocs;
+    if (currentImages.length > 0) {
+      const content = [
+        { type: "text", text: userPromptWithDocs }
+      ];
+      currentImages.forEach(img => {
+        content.push({
+          type: "image_url",
+          image_url: {
+            url: img.base64
+          }
+        });
       });
-    });
-    finalPrompt = content;
-  }
+      finalPrompt = content;
+    }
+    return finalPrompt;
+  };
 
   const processedHistory = chatHistory.map(m => {
     const hasImages = m.attachments && m.attachments.some(a => a.isImage && a.base64);
@@ -305,21 +329,57 @@ const generateResponse = async ({
     return m;
   });
 
-  const systemPrompt = buildSystemPrompt({ useKnowledgeBase, activeKbTitle, searchResults, otherChatsSummary, persona, providerProfile });
+  // Try without search first
+  const systemPromptWithoutSearch = buildSystemPrompt({ useKnowledgeBase, activeKbTitle, searchResults: [], otherChatsSummary, persona, providerProfile });
+  const finalPromptWithoutSearch = buildPromptWithCustomSearch([], '');
 
+  console.log("Adaptive Search: Attempting response without web search...");
   const response = await providerClient.generateResponse({
     model: normalizeModelId(model),
-    prompt: finalPrompt,
+    prompt: finalPromptWithoutSearch,
     chatHistory: processedHistory,
     temperature: temperature ?? 0.7,
     maxTokens: Math.min(maxTokens || 2048, 4096),
-    systemPrompt,
+    systemPrompt: systemPromptWithoutSearch,
     config: providerProfile?.config || {},
   });
 
+  const responseText = response.text || '';
+  if (doesResponseIndicateMissingKnowledge(responseText)) {
+    console.log("Adaptive Search: Model indicated missing knowledge or cutoff. Performing search...");
+    const { searchResults, userPromptWithSearch } = await createPromptWithSearch(prompt);
+    
+    if (searchResults && searchResults.length > 0) {
+      let searchContextStr = '\n\n[REAL-TIME LIVE INTERNET DATA FOR THIS QUERY]:\n';
+      searchResults.forEach((r, i) => {
+        searchContextStr += `Result ${i + 1}: ${r.title}\nDetails: ${r.snippet}\nSource URL: ${r.url}\n`;
+      });
+      searchContextStr += '\nCRITICAL INSTRUCTION: Live real-time internet data is provided above. You MUST use this data to answer the user\'s request accurately and directly.';
+
+      const systemPromptWithSearch = buildSystemPrompt({ useKnowledgeBase, activeKbTitle, searchResults, otherChatsSummary, persona, providerProfile });
+      const finalPromptWithSearch = buildPromptWithCustomSearch(searchResults, searchContextStr);
+
+      console.log("Adaptive Search: Running second attempt with web search context...");
+      const secondResponse = await providerClient.generateResponse({
+        model: normalizeModelId(model),
+        prompt: finalPromptWithSearch,
+        chatHistory: processedHistory,
+        temperature: temperature ?? 0.7,
+        maxTokens: Math.min(maxTokens || 2048, 4096),
+        systemPrompt: systemPromptWithSearch,
+        config: providerProfile?.config || {},
+      });
+
+      return {
+        text: secondResponse.text || 'The model returned an empty response.',
+        sources: searchResults.map((r) => ({ title: r.title, url: r.url })),
+      };
+    }
+  }
+
   return {
-    text: response.text || 'The model returned an empty response.',
-    sources: searchResults.length > 0 ? searchResults.map((r) => ({ title: r.title, url: r.url })) : null,
+    text: responseText || 'The model returned an empty response.',
+    sources: null,
   };
 };
 
@@ -346,59 +406,58 @@ const generateStreamResponse = async ({
 
   const normalizedProvider = resolveProvider(provider, providerProfile);
   const providerClient = getProvider(normalizedProvider);
-  
-  let searchResults = [];
-  let userPromptWithSearch = prompt;
-
-  if (useWebSearch) {
-    const searchObj = await createPromptWithSearch(prompt);
-    searchResults = searchObj.searchResults;
-    userPromptWithSearch = searchObj.userPromptWithSearch;
-  }
 
   const currentImages = attachments ? attachments.filter(a => a.isImage && a.base64) : [];
   const currentDocs = attachments ? attachments.filter(a => !a.isImage && a.textContent) : [];
 
-  let userPromptWithDocs = userPromptWithSearch;
-  if (currentDocs.length > 0) {
-    const targetedDocs = getTargetedDocs(prompt, currentDocs);
-    const targetedNames = new Set(targetedDocs.map(d => d.name));
-    const nonTargeted = currentDocs.filter(d => !targetedNames.has(d.name));
-    
-    let docsText = "";
-    if (nonTargeted.length > 0) {
-      docsText += `\n\n[Additional Attached Files (Not searched for this query to optimize tokens):\n` +
-        nonTargeted.map(d => `- ${d.name} (${d.size})`).join('\n') +
-        `\n(If you need to read any of these files, ask the user to specify them or refer to them directly.)]\n`;
+  const buildPromptWithCustomSearch = (searchRes = [], searchContext = '') => {
+    let userPromptWithSearch = prompt;
+    if (searchRes.length > 0) {
+      userPromptWithSearch += searchContext;
     }
-    
-    docsText += "\n\n" + targetedDocs.map(d => {
-      let text = d.textContent || "";
-      const maxChars = 40000;
-      if (text.length > maxChars) {
-        text = text.substring(0, maxChars) + "\n\n[Content truncated to save tokens...]";
-      }
-      return `[Attached File: ${d.name} (${d.size})]\n--- Start of File ---\n${text}\n--- End of File ---`;
-    }).join("\n\n");
-    
-    userPromptWithDocs += docsText;
-  }
 
-  let finalPrompt = userPromptWithDocs;
-  if (currentImages.length > 0) {
-    const content = [
-      { type: "text", text: userPromptWithDocs }
-    ];
-    currentImages.forEach(img => {
-      content.push({
-        type: "image_url",
-        image_url: {
-          url: img.base64
+    let userPromptWithDocs = userPromptWithSearch;
+    if (currentDocs.length > 0) {
+      const targetedDocs = getTargetedDocs(prompt, currentDocs);
+      const targetedNames = new Set(targetedDocs.map(d => d.name));
+      const nonTargeted = currentDocs.filter(d => !targetedNames.has(d.name));
+      
+      let docsText = "";
+      if (nonTargeted.length > 0) {
+        docsText += `\n\n[Additional Attached Files (Not searched for this query to optimize tokens):\n` +
+          nonTargeted.map(d => `- ${d.name} (${d.size})`).join('\n') +
+          `\n(If you need to read any of these files, ask the user to specify them or refer to them directly.)]\n`;
+      }
+      
+      docsText += "\n\n" + targetedDocs.map(d => {
+        let text = d.textContent || "";
+        const maxChars = 40000;
+        if (text.length > maxChars) {
+          text = text.substring(0, maxChars) + "\n\n[Content truncated to save tokens...]";
         }
+        return `[Attached File: ${d.name} (${d.size})]\n--- Start of File ---\n${text}\n--- End of File ---`;
+      }).join("\n\n");
+      
+      userPromptWithDocs += docsText;
+    }
+
+    let finalPrompt = userPromptWithDocs;
+    if (currentImages.length > 0) {
+      const content = [
+        { type: "text", text: userPromptWithDocs }
+      ];
+      currentImages.forEach(img => {
+        content.push({
+          type: "image_url",
+          image_url: {
+            url: img.base64
+          }
+        });
       });
-    });
-    finalPrompt = content;
-  }
+      finalPrompt = content;
+    }
+    return finalPrompt;
+  };
 
   const processedHistory = chatHistory.map(m => {
     const hasImages = m.attachments && m.attachments.some(a => a.isImage && a.base64);
@@ -421,24 +480,65 @@ const generateStreamResponse = async ({
     return m;
   });
 
-  const systemPrompt = buildSystemPrompt({ useKnowledgeBase, activeKbTitle, searchResults, otherChatsSummary, persona, providerProfile });
+  // Try without search first
+  const systemPromptWithoutSearch = buildSystemPrompt({ useKnowledgeBase, activeKbTitle, searchResults: [], otherChatsSummary, persona, providerProfile });
+  const finalPromptWithoutSearch = buildPromptWithCustomSearch([], '');
 
-  const response = await providerClient.generateStreamResponse(
-    {
-      model: normalizeModelId(model),
-      prompt: finalPrompt,
-      chatHistory: processedHistory,
-      temperature: temperature ?? 0.7,
-      maxTokens: Math.min(maxTokens || 2048, 4096),
-      systemPrompt,
-      config: providerProfile?.config || {},
-    },
-    onChunk
-  );
+  console.log("Adaptive Stream Search: Attempting response without web search...");
+  const response = await providerClient.generateResponse({
+    model: normalizeModelId(model),
+    prompt: finalPromptWithoutSearch,
+    chatHistory: processedHistory,
+    temperature: temperature ?? 0.7,
+    maxTokens: Math.min(maxTokens || 2048, 4096),
+    systemPrompt: systemPromptWithoutSearch,
+    config: providerProfile?.config || {},
+  });
+
+  const responseText = response.text || '';
+  if (doesResponseIndicateMissingKnowledge(responseText)) {
+    console.log("Adaptive Stream Search: Model indicated missing knowledge or cutoff. Performing search...");
+    const { searchResults, userPromptWithSearch } = await createPromptWithSearch(prompt);
+    
+    if (searchResults && searchResults.length > 0) {
+      let searchContextStr = '\n\n[REAL-TIME LIVE INTERNET DATA FOR THIS QUERY]:\n';
+      searchResults.forEach((r, i) => {
+        searchContextStr += `Result ${i + 1}: ${r.title}\nDetails: ${r.snippet}\nSource URL: ${r.url}\n`;
+      });
+      searchContextStr += '\nCRITICAL INSTRUCTION: Live real-time internet data is provided above. You MUST use this data to answer the user\'s request accurately and directly.';
+
+      const systemPromptWithSearch = buildSystemPrompt({ useKnowledgeBase, activeKbTitle, searchResults, otherChatsSummary, persona, providerProfile });
+      const finalPromptWithSearch = buildPromptWithCustomSearch(searchResults, searchContextStr);
+
+      console.log("Adaptive Stream Search: Running second attempt streaming with web search...");
+      const secondResponse = await providerClient.generateStreamResponse(
+        {
+          model: normalizeModelId(model),
+          prompt: finalPromptWithSearch,
+          chatHistory: processedHistory,
+          temperature: temperature ?? 0.7,
+          maxTokens: Math.min(maxTokens || 2048, 4096),
+          systemPrompt: systemPromptWithSearch,
+          config: providerProfile?.config || {},
+        },
+        onChunk
+      );
+
+      return {
+        text: secondResponse.text || 'The model returned an empty response.',
+        sources: searchResults.map((r) => ({ title: r.title, url: r.url })),
+      };
+    }
+  }
+
+  // If no search was needed, output the response immediately to the client
+  if (onChunk && responseText) {
+    onChunk(responseText);
+  }
 
   return {
-    text: response.text || 'The model returned an empty response.',
-    sources: searchResults.length > 0 ? searchResults.map((r) => ({ title: r.title, url: r.url })) : null,
+    text: responseText || 'The model returned an empty response.',
+    sources: null,
   };
 };
 
