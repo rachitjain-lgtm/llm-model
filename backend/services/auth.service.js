@@ -221,11 +221,10 @@ const resetUserPassword = async ({ email, token, newPassword }) => {
   const usersCollection = db.collection('users');
   const user = await usersCollection.findOne({
     email: email.toLowerCase().trim(),
-    resetPasswordToken: token,
-    resetPasswordExpires: { $gt: new Date() }
+    resetPasswordToken: token
   });
 
-  if (!user) {
+  if (!user || !user.resetPasswordExpires || new Date(user.resetPasswordExpires) < new Date()) {
     throw new Error('Password reset token is invalid or has expired');
   }
 
