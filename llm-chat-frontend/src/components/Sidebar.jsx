@@ -41,11 +41,20 @@ export default function Sidebar() {
   const handleCreateChat = (e) => {
     if (e) e.stopPropagation();
     if (isCreatingChat) return;
+
+    // If currently on an empty chat, do nothing at all
+    const activeChat = conversations.find(c => c.id === activeId);
+    if (activeChat && (!activeChat.messages || activeChat.messages.length === 0)) {
+      return;
+    }
+
+    // Otherwise, check if there is an empty conversation in the list to switch to
     const emptyChat = conversations.find(c => !c.messages || c.messages.length === 0);
     if (emptyChat) {
       dispatch(syncActiveConversation(emptyChat.id));
       return;
     }
+
     dispatch(createChatAsync({ title: "New Conversation" }));
   };
 
