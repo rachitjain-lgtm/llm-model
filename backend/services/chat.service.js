@@ -281,6 +281,9 @@ const generateChatResponse = async (chatId, userId, payload) => {
   if (objChatId) {
     const prevMsgs = await db.collection('messages').find({ chatId: objChatId }).sort({ createdAt: 1 }).toArray();
     chatHistory = prevMsgs.map(m => ({ sender: m.sender, content: m.content }));
+    if (chatHistory.length > 0 && chatHistory[chatHistory.length - 1].sender === 'user' && chatHistory[chatHistory.length - 1].content === payload.prompt) {
+      chatHistory.pop();
+    }
   }
 
   let otherChatsSummary = '';
@@ -337,6 +340,9 @@ const generateStreamChatResponse = async (chatId, userId, payload, onChunk) => {
   if (objChatId) {
     const prevMsgs = await db.collection('messages').find({ chatId: objChatId }).sort({ createdAt: 1 }).toArray();
     chatHistory = prevMsgs.map(m => ({ sender: m.sender, content: m.content }));
+    if (chatHistory.length > 0 && chatHistory[chatHistory.length - 1].sender === 'user' && chatHistory[chatHistory.length - 1].content === payload.prompt) {
+      chatHistory.pop();
+    }
   }
 
   let otherChatsSummary = '';
