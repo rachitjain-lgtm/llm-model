@@ -66,6 +66,32 @@ const getMe = async (req, res) => {
   });
 };
 
+const forgotPassword = async (req, res, next) => {
+  try {
+    const { email } = req.body;
+    const token = await authService.generatePasswordResetToken({ email });
+    res.status(200).json({
+      success: true,
+      token,
+    });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+};
+
+const resetPassword = async (req, res, next) => {
+  try {
+    const { email, token, newPassword } = req.body;
+    await authService.resetUserPassword({ email, token, newPassword });
+    res.status(200).json({
+      success: true,
+      message: 'Password has been reset successfully',
+    });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+};
+
 module.exports = {
   register,
   login,
@@ -73,4 +99,6 @@ module.exports = {
   refreshToken,
   logout,
   getMe,
+  forgotPassword,
+  resetPassword,
 };

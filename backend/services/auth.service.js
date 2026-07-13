@@ -179,6 +179,75 @@ const refreshAuthToken = async (incomingRefreshToken) => {
   return { accessToken: newAccessToken };
 };
 
+const crypto = require('crypto');
+
+const generatePasswordResetToken = async ({ email }) => {
+  if (!email) {
+    throw new Error('Email is required');
+  }
+
+  const db = getDb();
+  const usersCollection = db.collection('users');
+  const user = await usersCollection.findOne({ email: email.toLowerCase().trim() });
+  
+  if (!user) {
+    throw new Error('No user found with this email address');
+  }
+
+  const token = crypto.randomBytes(20).toString('hex');
+  const expires = new Date();
+  expires.setHours(expires.getHours() + 1); // 1 hour expiry
+
+  await usersCollection.updateOne(
+    { _id: user._id },
+    {
+      $set: {
+        resetPasswordToken: token,
+        resetPasswordExpires: expires,
+        updatedAt: new Date()
+      }
+    }
+  );
+
+  return token;
+};
+
+const resetUserPassword = async ({ email, token, newPassword }) => {
+  if (!email || !token || !newPassword) {
+    throw new Error('Email, token, and new password are required');
+  }
+
+  const db = getDb();
+  const usersCollection = db.collection('users');
+  const user = await usersCollection.findOne({
+    email: email.toLowerCase().trim(),
+    resetPasswordToken: token,
+    resetPasswordExpires: { $gt: new Date() }
+  });
+
+  if (!user) {
+    throw new Error('Password reset token is invalid or has expired');
+  }
+
+  const hashedPassword = await hashPassword(newPassword);
+
+  await usersCollection.updateOne(
+    { _id: user._id },
+    {
+      $set: {
+        password: hashedPassword,
+        updatedAt: new Date()
+      },
+      $unset: {
+        resetPasswordToken: '',
+        resetPasswordExpires: ''
+      }
+    }
+  );
+
+  return true;
+};
+
 const logoutUser = async (incomingRefreshToken) => {
   if (incomingRefreshToken) {
     const db = getDb();
@@ -192,4 +261,6 @@ module.exports = {
   googleLoginUser,
   refreshAuthToken,
   logoutUser,
+  generatePasswordResetToken,
+  resetUserPassword,
 };

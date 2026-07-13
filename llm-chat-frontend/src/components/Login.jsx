@@ -15,6 +15,7 @@ import {
 import { GoogleLogin } from "@react-oauth/google";
 import { jwtDecode } from "jwt-decode";
 import axiosClient from "../api/axiosClient";
+import axios from "axios";
 import { 
   authStart, 
   loginSuccess, 
@@ -44,6 +45,7 @@ export default function Login() {
   const [newPassword, setNewPassword] = useState("");
   const [confirmNewPassword, setConfirmNewPassword] = useState("");
   const [resetSuccess, setResetSuccess] = useState(false);
+  const [resetToken, setResetToken] = useState("");
 
   // Field validations
   const [emailError, setEmailError] = useState("");
@@ -253,18 +255,54 @@ export default function Login() {
     }
   };
 
-  const handleForgotSubmit = (e) => {
+  const handleForgotSubmit = async (e) => {
     e.preventDefault();
     if (!validateForgot()) return;
 
     dispatch(authStart());
 
-    setTimeout(() => {
+    try {
+      const res = await axiosClient.post("/auth/forgot-password", {
+        email: email.trim()
+      });
+      const token = res.data.token;
+      setResetToken(token);
+
+      const resetLink = `${window.location.origin}/?reset=true&email=${encodeURIComponent(email.trim())}&token=${token}`;
+
+      const serviceId = import.meta.env.VITE_EMAILJS_SERVICE_ID;
+      const templateId = import.meta.env.VITE_EMAILJS_TEMPLATE_ID;
+      const publicKey = import.meta.env.VITE_EMAILJS_PUBLIC_KEY;
+
+      if (serviceId && templateId && publicKey) {
+        try {
+          await axios.post("https://api.emailjs.com/api/v1.0/email/send", {
+            service_id: serviceId,
+            template_id: templateId,
+            user_id: publicKey,
+            template_params: {
+              to_email: email.trim(),
+              reset_link: resetLink,
+              to_name: email.trim().split('@')[0]
+            }
+          });
+          console.log("Email sent successfully via EmailJS!");
+        } catch (emailErr) {
+          console.error("EmailJS dispatch failed:", emailErr.response?.data || emailErr.message);
+          console.log("Local development fallback link:", resetLink);
+        }
+      } else {
+        console.log("EmailJS is not configured. Local development fallback link:", resetLink);
+      }
+
       dispatch(recoverySuccess());
-    }, 1000);
+    } catch (err) {
+      const errMsg = err.response?.data?.message || "Failed to generate password reset token.";
+      dispatch(authFailure(errMsg));
+    }
   };
 
-  const handleResetPasswordSubmit = (e) => {
+  const handleResetPasswordSubmit = async (e) => {
     e.preventDefault();
     setPasswordError("");
     setConfirmPasswordError("");
@@ -284,11 +322,30 @@ export default function Login() {
 
     dispatch(authStart());
 
-    setTimeout(() => {
-      dispatch(resetPasswordSuccess({ email: email.trim(), newPassword }));
+    const params = new URLSearchParams(window.location.search);
+    const urlEmail = params.get("email") || email;
+    const urlToken = params.get("token") || resetToken;
+
+    try {
+      await axiosClient.post("/auth/reset-password", {
+        email: urlEmail.trim(),
+        token: urlToken,
+        newPassword: newPassword
+      });
+
+      dispatch(resetPasswordSuccess());
       setPassword(newPassword); // Pre-fill password for instant sign-in
       setResetSuccess(true);
-    }, 1000);
+
+      // Clean up URL query parameters
+      if (window.history.pushState) {
+        const newurl = window.location.protocol + "//" + window.location.host + window.location.pathname;
+        window.history.pushState({ path: newurl }, '', newurl);
+      }
+    } catch (err) {
+      const errMsg = err.response?.data?.message || "Failed to reset password. The link may have expired.";
+      dispatch(authFailure(errMsg));
+    }
   };
 
   return (
