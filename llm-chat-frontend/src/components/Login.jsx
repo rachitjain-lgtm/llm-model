@@ -28,6 +28,7 @@ import {
 export default function Login() {
   const dispatch = useDispatch();
   const { isLoading, error, usersDb, recoveryEmailSent } = useSelector((state) => state.auth);
+  const googleSignInEnabled = Boolean(import.meta.env.VITE_GOOGLE_CLIENT_ID);
 
   // View state: 'login' | 'signup' | 'forgot' | 'reset-password'
   const [view, setView] = useState("login");
@@ -375,7 +376,7 @@ export default function Login() {
                 </span>
                 <input
                   type={showPassword ? "text" : "password"}
-                  placeholder="••••••••"
+                  placeholder="ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¢"
                   value={password}
                   onChange={(e) => {
                     setPassword(e.target.value);
@@ -415,27 +416,28 @@ export default function Login() {
             </button>
 
             {/* Google OAuth Section */}
-            <div className="pt-1">
-              <div className="relative flex items-center justify-center my-3.5">
-                <div className="border-t border-[#E7E7E7] w-full" />
-                <span className="bg-white/90 px-2 text-[10px] uppercase font-bold text-[#A3A3A3] absolute">
-                  or continue with
-                </span>
-              </div>
+            {googleSignInEnabled && (
+              <div className="pt-1">
+                <div className="relative flex items-center justify-center my-3.5">
+                  <div className="border-t border-[#E7E7E7] w-full" />
+                  <span className="bg-white/90 px-2 text-[10px] uppercase font-bold text-[#A3A3A3] absolute">
+                    or continue with
+                  </span>
+                </div>
 
-              <div className="flex justify-center w-full min-h-[40px]">
-                <GoogleLogin
-                  onSuccess={handleGoogleSuccess}
-                  onError={handleGoogleError}
-                  theme="outline"
-                  shape="pill"
-                  size="medium"
-                  width="320"
-                  text="signin_with"
-                />
+                <div className="flex justify-center w-full min-h-[40px]">
+                  <GoogleLogin
+                    onSuccess={handleGoogleSuccess}
+                    onError={handleGoogleError}
+                    theme="outline"
+                    shape="pill"
+                    size="medium"
+                    width="320"
+                    text="signin_with"
+                  />
+                </div>
               </div>
-            </div>
-
+            )}
             <div className="text-center mt-4 text-[11px] font-medium text-[#737373]">
               Don't have an account?{" "}
               <button
@@ -516,7 +518,7 @@ export default function Login() {
                 </span>
                 <input
                   type={showPassword ? "text" : "password"}
-                  placeholder="••••••••"
+                  placeholder="ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¢"
                   value={password}
                   onChange={(e) => {
                     setPassword(e.target.value);
@@ -543,7 +545,7 @@ export default function Login() {
                 </span>
                 <input
                   type={showPassword ? "text" : "password"}
-                  placeholder="••••••••"
+                  placeholder="ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¢"
                   value={confirmPassword}
                   onChange={(e) => {
                     setConfirmPassword(e.target.value);
@@ -576,27 +578,28 @@ export default function Login() {
             </button>
 
             {/* Google OAuth Section */}
-            <div className="pt-1">
-              <div className="relative flex items-center justify-center my-3.5">
-                <div className="border-t border-[#E7E7E7] w-full" />
-                <span className="bg-white/90 px-2 text-[10px] uppercase font-bold text-[#A3A3A3] absolute">
-                  or continue with
-                </span>
-              </div>
+            {googleSignInEnabled && (
+              <div className="pt-1">
+                <div className="relative flex items-center justify-center my-3.5">
+                  <div className="border-t border-[#E7E7E7] w-full" />
+                  <span className="bg-white/90 px-2 text-[10px] uppercase font-bold text-[#A3A3A3] absolute">
+                    or continue with
+                  </span>
+                </div>
 
-              <div className="flex justify-center w-full min-h-[40px]">
-                <GoogleLogin
-                  onSuccess={handleGoogleSuccess}
-                  onError={handleGoogleError}
-                  theme="outline"
-                  shape="pill"
-                  size="medium"
-                  width="320"
-                  text="signup_with"
-                />
+                <div className="flex justify-center w-full min-h-[40px]">
+                  <GoogleLogin
+                    onSuccess={handleGoogleSuccess}
+                    onError={handleGoogleError}
+                    theme="outline"
+                    shape="pill"
+                    size="medium"
+                    width="320"
+                    text="signup_with"
+                  />
+                </div>
               </div>
-            </div>
-
+            )}
             <div className="text-center mt-4 text-[11px] font-medium text-[#737373]">
               Already have an account?{" "}
               <button
@@ -753,7 +756,7 @@ export default function Login() {
                     </span>
                     <input
                       type={showPassword ? "text" : "password"}
-                      placeholder="••••••••"
+                      placeholder="ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¢"
                       value={newPassword}
                       onChange={(e) => {
                         setNewPassword(e.target.value);
@@ -787,7 +790,7 @@ export default function Login() {
                     </span>
                     <input
                       type={showPassword ? "text" : "password"}
-                      placeholder="••••••••"
+                      placeholder="ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¢"
                       value={confirmNewPassword}
                       onChange={(e) => {
                         setConfirmNewPassword(e.target.value);

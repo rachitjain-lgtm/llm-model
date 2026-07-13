@@ -1,68 +1,171 @@
-export const MODEL_OPTIONS = [
+export const BUILTIN_PROVIDER_PROFILES = [
   {
-    id: "deepseek/deepseek-r1",
-    label: "DeepSeek R1",
-    provider: "OpenRouter"
+    id: "openrouter",
+    name: "OpenRouter Default",
+    providerType: "openrouter",
+    isBuiltin: true,
+    models: [
+      { id: "deepseek/deepseek-r1", label: "DeepSeek R1" },
+      { id: "deepseek/deepseek-chat", label: "DeepSeek V3" },
+      { id: "google/gemini-2.5-flash", label: "Gemini 2.5 Flash" },
+      { id: "x-ai/grok-4.3", label: "Grok 4.3" },
+      { id: "google/gemma-3-12b-it", label: "Gemma 3 12B" },
+      { id: "mistralai/mistral-small-3.2-24b-instruct", label: "Mistral Small 3.2 24B" },
+      { id: "qwen/qwen3-coder", label: "Qwen 3 Coder" },
+      { id: "qwen/qwen3-vl-32b-instruct", label: "Qwen 3 VL (Vision)" }
+    ]
   },
   {
-    id: "deepseek/deepseek-chat",
-    label: "DeepSeek V3",
-    provider: "OpenRouter"
+    id: "openai",
+    name: "OpenAI Default",
+    providerType: "openai",
+    isBuiltin: true,
+    models: [
+      { id: "gpt-4o-mini", label: "GPT-4o Mini" },
+      { id: "gpt-4o", label: "GPT-4o" },
+      { id: "o3-mini", label: "o3-mini" }
+    ]
   },
   {
-    id: "google/gemini-2.5-flash",
-    label: "Gemini 2.5 Flash",
-    provider: "OpenRouter"
+    id: "azure",
+    name: "Azure OpenAI Default",
+    providerType: "azure",
+    isBuiltin: true,
+    models: [
+      { id: "azure-gpt-4o", label: "GPT-4o" },
+      { id: "azure-gpt-4o-mini", label: "GPT-4o Mini" }
+    ]
   },
   {
-    id: "x-ai/grok-4.3",
-    label: "Grok 4.3",
-    provider: "OpenRouter"
+    id: "nvidia",
+    name: "NVIDIA Default",
+    providerType: "nvidia",
+    isBuiltin: true,
+    models: [
+      { id: "meta/llama-3.1-8b-instruct", label: "Llama 3.1 8B" },
+      { id: "meta/llama-3.1-70b-instruct", label: "Llama 3.1 70B" },
+      { id: "nvidia/nemotron-4-340b-instruct", label: "Nemotron 4 340B" },
+      { id: "nvidia/llama-3.1-nemotron-70b-instruct", label: "Nemotron 70B (NVIDIA)" },
+      { id: "meta/llama-3.3-70b-instruct", label: "Llama 3.3 70B (NVIDIA)" },
+      { id: "meta/llama-3.2-11b-vision-instruct", label: "Llama 3.2 Vision (NVIDIA)" }
+    ]
   },
   {
-    id: "google/gemma-3-12b-it",
-    label: "Gemma 3 12B",
-    provider: "OpenRouter"
+    id: "aws-bedrock",
+    name: "AWS Bedrock Default",
+    providerType: "aws-bedrock",
+    isBuiltin: true,
+    models: [
+      { id: "anthropic.claude-3-5-sonnet", label: "Claude 3.5 Sonnet" },
+      { id: "meta.llama3-70b-instruct-v1:0", label: "Llama 3 70B" },
+      { id: "mistral.mixtral-8x7b-instruct-v0:1", label: "Mixtral 8x7B" }
+    ]
   },
   {
-    id: "mistralai/mistral-small-3.2-24b-instruct",
-    label: "Mistral Small 3.2 24B",
-    provider: "OpenRouter"
-  },
-  {
-    id: "qwen/qwen3-coder",
-    label: "Qwen 3 Coder",
-    provider: "OpenRouter"
-  },
-  {
-    id: "qwen/qwen3-vl-32b-instruct",
-    label: "Qwen 3 VL (Vision)",
-    provider: "OpenRouter"
-  },
-  {
-    id: "nvidia/llama-3.1-nemotron-70b-instruct",
-    label: "Nemotron 70B (NVIDIA)",
-    provider: "NVIDIA"
-  },
-  {
-    id: "meta/llama-3.3-70b-instruct",
-    label: "Llama 3.3 70B (NVIDIA)",
-    provider: "NVIDIA"
-  },
-  {
-    id: "meta/llama-3.2-11b-vision-instruct",
-    label: "Llama 3.2 Vision (NVIDIA)",
-    provider: "NVIDIA"
+    id: "huggingface",
+    name: "Hugging Face Default",
+    providerType: "huggingface",
+    isBuiltin: true,
+    models: [
+      { id: "mistralai/Mistral-7B-Instruct-v0.3", label: "Mistral 7B Instruct" },
+      { id: "meta-llama/Llama-3.1-8B-Instruct", label: "Llama 3.1 8B" },
+      { id: "HuggingFaceH4/zephyr-7b-beta", label: "Zephyr 7B" }
+    ]
   }
 ];
 
+export const PROVIDER_OPTIONS = [
+  { id: "openrouter", label: "OpenRouter" },
+  { id: "openai", label: "OpenAI" },
+  { id: "azure", label: "Azure OpenAI" },
+  { id: "nvidia", label: "NVIDIA" },
+  { id: "aws-bedrock", label: "AWS Bedrock" },
+  { id: "huggingface", label: "Hugging Face" }
+];
+
+export const PROVIDER_FIELD_PRESETS = {
+  openrouter: {
+    fields: ["apiKey", "apiBaseUrl", "appName"],
+    label: "OpenRouter",
+  },
+  openai: {
+    fields: ["apiKey", "apiBaseUrl"],
+    label: "OpenAI",
+  },
+  azure: {
+    fields: ["endpoint", "apiKey", "deploymentName", "apiVersion"],
+    label: "Azure OpenAI",
+  },
+  nvidia: {
+    fields: ["apiKey", "apiBaseUrl"],
+    label: "NVIDIA",
+  },
+  "aws-bedrock": {
+    fields: ["awsRegion", "accessKeyId", "secretAccessKey", "modelId", "knowledgeBaseId", "guardrailId"],
+    label: "AWS Bedrock",
+  },
+  huggingface: {
+    fields: ["apiKey", "apiBaseUrl"],
+    label: "Hugging Face",
+  }
+};
+
+export const FIELD_LABELS = {
+  apiKey: "API Key",
+  apiBaseUrl: "API Base URL",
+  appName: "App Name",
+  endpoint: "Endpoint",
+  deploymentName: "Deployment Name",
+  apiVersion: "API Version",
+  awsRegion: "AWS Region",
+  accessKeyId: "AWS Access Key ID",
+  secretAccessKey: "AWS Secret Access Key",
+  modelId: "Model ID",
+  knowledgeBaseId: "Knowledge Base ID",
+  guardrailId: "Guardrail ID",
+};
+
 export const DEFAULT_MODEL_ID = "google/gemini-2.5-flash";
 
-export function getModelLabel(modelId) {
-  if (!modelId || modelId === "Claude 3 Sonnet" || modelId.includes("Claude")) {
-    return "Gemini 2.5 Flash";
-  }
-  return MODEL_OPTIONS.find((model) => model.id === modelId)?.label || modelId;
+export function normalizeProviderKey(provider) {
+  return String(provider || "openrouter").toLowerCase().trim();
+}
+
+export function getAllProviderProfiles(customProfiles = []) {
+  return [...BUILTIN_PROVIDER_PROFILES, ...customProfiles];
+}
+
+export function getProviderProfileLabel(profile) {
+  if (!profile) return "Unknown Provider";
+  return profile.name || profile.label || profile.providerType || profile.id;
+}
+
+export function getProviderProfileByKey(providerKey, providerProfiles = []) {
+  const key = normalizeProviderKey(providerKey);
+  return getAllProviderProfiles(providerProfiles).find((profile) => profile.id === key) || null;
+}
+
+export function getModelsForProvider(providerKey, providerProfiles = []) {
+  const profile = getProviderProfileByKey(providerKey, providerProfiles);
+  if (profile?.models?.length) return profile.models;
+
+  const providerType = normalizeProviderKey(providerKey);
+  const builtin = BUILTIN_PROVIDER_PROFILES.find((p) => p.providerType === providerType || p.id === providerType);
+  return builtin?.models || BUILTIN_PROVIDER_PROFILES[0].models;
+}
+
+export function getDefaultModelForProvider(providerKey, providerProfiles = []) {
+  return getModelsForProvider(providerKey, providerProfiles)[0]?.id || DEFAULT_MODEL_ID;
+}
+
+export function getModelLabel(modelId, providerProfiles = []) {
+  const allModels = BUILTIN_PROVIDER_PROFILES.flatMap((profile) => profile.models)
+    .concat((providerProfiles || []).flatMap((profile) => profile.models || []));
+  return allModels.find((model) => model.id === modelId)?.label || modelId || "Unknown model";
+}
+
+export function getProviderTypeLabel(providerType) {
+  return PROVIDER_OPTIONS.find((provider) => provider.id === normalizeProviderKey(providerType))?.label || providerType;
 }
 
 export const AI_PERSONAS = [
@@ -71,4 +174,3 @@ export const AI_PERSONAS = [
   { id: "analyst", label: "Data Analyst", prompt: "You are an expert data analyst. Focus on structured data, SQL queries, metrics, insights, and data visualization." },
   { id: "writer", label: "Creative Writer", prompt: "You are a skilled creative writer and editor. Use engaging tone, rich phrasing, and polished narrative structure." }
 ];
-

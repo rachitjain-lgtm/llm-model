@@ -5,22 +5,24 @@ import Topbar from "./components/Topbar";
 import ChatWindow from "./components/ChatWindow";
 import PromptComposer from "./components/PromptComposer";
 import SettingsModal from "./components/SettingsModal";
+import ProviderManagerModal from "./components/ProviderManagerModal";
 import PromptLibraryModal from "./components/PromptLibraryModal";
 import Login from "./components/Login";
 import { setSidebarOpen } from "./store/uiSlice";
 import { fetchChats } from "./store/chatSlice";
 import { logout } from "./store/authSlice";
+import { fetchProviders } from "./store/providerSlice";
 
 function App() {
   const dispatch = useDispatch();
   const sidebarOpen = useSelector((state) => state.ui.sidebarOpen);
   const theme = useSelector((state) => state.ui.theme);
   const isAuthenticated = useSelector((state) => state.auth.isAuthenticated);
-  const user = useSelector((state) => state.auth.user);
 
   useEffect(() => {
     if (isAuthenticated) {
       dispatch(fetchChats());
+      dispatch(fetchProviders());
     }
   }, [isAuthenticated, dispatch]);
 
@@ -69,8 +71,6 @@ function App() {
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-[#F5F7F7] dark:bg-[#0f1214] text-[#171717] dark:text-[#eceff1] transition-colors duration-200">
-
-      {/* Sidebar Overlay for mobile views */}
       {sidebarOpen && (
         <div
           onClick={() => dispatch(setSidebarOpen(false))}
@@ -78,26 +78,17 @@ function App() {
         />
       )}
 
-      {/* Left Sidebar */}
       <Sidebar />
 
-      {/* Central Chat area */}
       <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden relative">
         <Topbar />
-
-        {/* Scrollable messages container */}
         <ChatWindow />
-
-        {/* Bottom Prompter */}
         <PromptComposer />
       </div>
 
-      {/* Global Settings Modal */}
       <SettingsModal />
-
-      {/* Prompt Library Modal */}
+      <ProviderManagerModal />
       <PromptLibraryModal />
-
     </div>
   );
 }

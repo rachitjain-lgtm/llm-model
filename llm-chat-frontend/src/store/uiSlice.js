@@ -1,10 +1,10 @@
-import { createSlice } from "@reduxjs/toolkit";
+﻿import { createSlice } from "@reduxjs/toolkit";
 
 const defaultApiSettings = {
   apiKey: "",
   appName: import.meta.env.VITE_APP_NAME || "AI Studio",
   providerName: "OpenRouter",
-  apiBaseUrl: import.meta.env.VITE_OPENROUTER_API_URL || "https://openrouter.ai/api/v1/chat/completions"
+  apiBaseUrl: import.meta.env.VITE_OPENROUTER_API_URL || "https://openrouter.ai/api/v1/chat/completions",
 };
 
 const getStoredApiSettings = () => {
@@ -17,14 +17,14 @@ const getStoredApiSettings = () => {
   if (!saved) {
     return {
       ...defaultApiSettings,
-      apiKey: import.meta.env.VITE_OPENROUTER_API_KEY || ""
+      apiKey: import.meta.env.VITE_OPENROUTER_API_KEY || "",
     };
   }
 
   try {
     return {
       ...defaultApiSettings,
-      ...JSON.parse(saved)
+      ...JSON.parse(saved),
     };
   } catch {
     return defaultApiSettings;
@@ -36,12 +36,15 @@ const persistApiSettings = (state) => {
     return;
   }
 
-  localStorage.setItem("api_settings", JSON.stringify({
-    apiKey: state.apiKey,
-    appName: state.appName,
-    providerName: state.providerName,
-    apiBaseUrl: state.apiBaseUrl
-  }));
+  localStorage.setItem(
+    "api_settings",
+    JSON.stringify({
+      apiKey: state.apiKey,
+      appName: state.appName,
+      providerName: state.providerName,
+      apiBaseUrl: state.apiBaseUrl,
+    })
+  );
 };
 
 const storedApiSettings = getStoredApiSettings();
@@ -51,15 +54,16 @@ const initialState = {
   modelDropdownOpen: false,
   kbDropdownOpen: false,
   activeKbId: "kb-3e7f2a1",
-  theme: typeof window !== "undefined" ? (localStorage.getItem("theme") || "light") : "light",
+  theme: typeof window !== "undefined" ? localStorage.getItem("theme") || "light" : "light",
   settingsModalOpen: false,
   promptLibraryModalOpen: false,
+  providerManagerModalOpen: false,
   apiKey: storedApiSettings.apiKey,
   appName: storedApiSettings.appName,
   providerName: storedApiSettings.providerName,
   apiBaseUrl: storedApiSettings.apiBaseUrl,
   rightPanelOpen: false,
-  regionDropdownOpen: false
+  regionDropdownOpen: false,
 };
 
 const uiSlice = createSlice({
@@ -108,6 +112,12 @@ const uiSlice = createSlice({
     setPromptLibraryModalOpen(state, action) {
       state.promptLibraryModalOpen = action.payload;
     },
+    toggleProviderManagerModal(state) {
+      state.providerManagerModalOpen = !state.providerManagerModalOpen;
+    },
+    setProviderManagerModalOpen(state, action) {
+      state.providerManagerModalOpen = action.payload;
+    },
     setApiKey(state, action) {
       state.apiKey = action.payload;
       persistApiSettings(state);
@@ -127,8 +137,8 @@ const uiSlice = createSlice({
     },
     setRegionDropdownOpen(state, action) {
       state.regionDropdownOpen = action.payload;
-    }
-  }
+    },
+  },
 });
 
 export const {
@@ -144,12 +154,14 @@ export const {
   toggleSettingsModal,
   setSettingsModalOpen,
   setPromptLibraryModalOpen,
+  toggleProviderManagerModal,
+  setProviderManagerModalOpen,
   setApiKey,
   setAppName,
   toggleRightPanel,
   setRightPanelOpen,
   toggleRegionDropdown,
-  setRegionDropdownOpen
+  setRegionDropdownOpen,
 } = uiSlice.actions;
 
 export default uiSlice.reducer;

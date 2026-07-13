@@ -21,6 +21,10 @@ app.use('/api/auth', authRoutes);
 const chatRoutes = require('./routes/chat.routes');
 app.use('/api/chats', chatRoutes);
 
+// Provider Routes
+const providerRoutes = require('./routes/provider.routes');
+app.use('/api/providers', providerRoutes);
+
 // Generate Routes (PDF, DOCX, PPTX, XLSX, Image)
 const generateRoutes = require('./routes/generate.routes');
 app.use('/api/generate', generateRoutes);

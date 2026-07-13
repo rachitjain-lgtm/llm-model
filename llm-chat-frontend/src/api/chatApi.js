@@ -76,6 +76,7 @@ export const chatApi = {
       body: JSON.stringify({
         prompt,
         attachments,
+        provider: conversation.provider,
         model: conversation.model,
         temperature: conversation.temperature,
         maxTokens: conversation.maxTokens,
@@ -190,3 +191,4 @@ export const chatApi = {
     onDone(accumulatedText || "The model returned an empty response.", finalSources);
   }
 };
+
