@@ -136,6 +136,7 @@ const initialState = {
   searchQuery: "",
   streamingOn: true,
   isLoading: false,
+  isCreatingChat: false,
   error: null,
   currentUserEmail: initialEmail
 };
@@ -316,10 +317,17 @@ const chatSlice = createSlice({
         state.isLoading = false;
         state.error = action.payload;
       })
+      .addCase(createChatAsync.pending, (state) => {
+        state.isCreatingChat = true;
+      })
       .addCase(createChatAsync.fulfilled, (state, action) => {
         state.conversations.unshift(action.payload);
         state.activeConversationId = action.payload.id;
+        state.isCreatingChat = false;
         persistState(state);
+      })
+      .addCase(createChatAsync.rejected, (state) => {
+        state.isCreatingChat = false;
       })
       .addCase(deleteChatAsync.fulfilled, (state, action) => {
         state.conversations = state.conversations.filter((conversation) => conversation.id !== action.payload);

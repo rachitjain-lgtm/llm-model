@@ -36,8 +36,11 @@ export default function Sidebar() {
   const [editingId, setEditingId] = useState(null);
   const [editTitle, setEditTitle] = useState("");
 
+  const isCreatingChat = useSelector(state => state.chat.isCreatingChat);
+
   const handleCreateChat = (e) => {
     if (e) e.stopPropagation();
+    if (isCreatingChat) return;
     const emptyChat = conversations.find(c => !c.messages || c.messages.length === 0);
     if (emptyChat) {
       dispatch(syncActiveConversation(emptyChat.id));
