@@ -68,6 +68,23 @@ const doesResponseIndicateMissingKnowledge = (text) => {
   return patterns.some(p => lowercase.includes(p));
 };
 
+const hasVisualRequest = (prompt) => {
+  const lowercase = String(prompt).toLowerCase();
+  const keywords = ["draw", "diagram", "chart", "flowchart", "timeline", "graph", "mermaid", "svg", "reactflow", "visual"];
+  return keywords.some(k => lowercase.includes(k));
+};
+
+const sanitizeResponseVisuals = (text, userPrompt) => {
+  if (hasVisualRequest(userPrompt)) {
+    return text;
+  }
+  let cleaned = text;
+  cleaned = cleaned.replace(/```mermaid[\s\S]*?```/g, '');
+  cleaned = cleaned.replace(/```reactflow[\s\S]*?```/g, '');
+  cleaned = cleaned.replace(/```svg[\s\S]*?```/g, '');
+  return cleaned.trim();
+};
+
 const normalizeModelId = (modelId) => {
   if (!modelId) return "google/gemini-2.5-flash";
   if (MODEL_MAPPINGS[modelId]) return MODEL_MAPPINGS[modelId];
@@ -370,15 +387,17 @@ const generateResponse = async ({
         config: providerProfile?.config || {},
       });
 
+      const sanitizedSecondText = sanitizeResponseVisuals(secondResponse.text || '', prompt);
       return {
-        text: secondResponse.text || 'The model returned an empty response.',
+        text: sanitizedSecondText || 'The model returned an empty response.',
         sources: searchResults.map((r) => ({ title: r.title, url: r.url })),
       };
     }
   }
 
+  const sanitizedFirstText = sanitizeResponseVisuals(responseText, prompt);
   return {
-    text: responseText || 'The model returned an empty response.',
+    text: sanitizedFirstText || 'The model returned an empty response.',
     sources: null,
   };
 };
@@ -524,20 +543,22 @@ const generateStreamResponse = async ({
         onChunk
       );
 
+      const sanitizedSecondText = sanitizeResponseVisuals(secondResponse.text || '', prompt);
       return {
-        text: secondResponse.text || 'The model returned an empty response.',
+        text: sanitizedSecondText || 'The model returned an empty response.',
         sources: searchResults.map((r) => ({ title: r.title, url: r.url })),
       };
     }
   }
 
+  const sanitizedFirstText = sanitizeResponseVisuals(responseText, prompt);
   // If no search was needed, output the response immediately to the client
-  if (onChunk && responseText) {
-    onChunk(responseText);
+  if (onChunk && sanitizedFirstText) {
+    onChunk(sanitizedFirstText);
   }
 
   return {
-    text: responseText || 'The model returned an empty response.',
+    text: sanitizedFirstText || 'The model returned an empty response.',
     sources: null,
   };
 };
