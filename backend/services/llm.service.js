@@ -218,6 +218,7 @@ const generateResponse = async ({
   temperature,
   maxTokens,
   useKnowledgeBase,
+  useWebSearch,
   activeKbTitle,
   persona,
 }) => {
@@ -229,7 +230,15 @@ const generateResponse = async ({
 
   const normalizedProvider = resolveProvider(provider, providerProfile);
   const providerClient = getProvider(normalizedProvider);
-  const { searchResults, userPromptWithSearch } = await createPromptWithSearch(prompt);
+  
+  let searchResults = [];
+  let userPromptWithSearch = prompt;
+
+  if (useWebSearch) {
+    const searchObj = await createPromptWithSearch(prompt);
+    searchResults = searchObj.searchResults;
+    userPromptWithSearch = searchObj.userPromptWithSearch;
+  }
 
   const currentImages = attachments ? attachments.filter(a => a.isImage && a.base64) : [];
   const currentDocs = attachments ? attachments.filter(a => !a.isImage && a.textContent) : [];
@@ -325,6 +334,7 @@ const generateStreamResponse = async ({
   temperature,
   maxTokens,
   useKnowledgeBase,
+  useWebSearch,
   activeKbTitle,
   persona,
 }, onChunk) => {
@@ -336,7 +346,15 @@ const generateStreamResponse = async ({
 
   const normalizedProvider = resolveProvider(provider, providerProfile);
   const providerClient = getProvider(normalizedProvider);
-  const { searchResults, userPromptWithSearch } = await createPromptWithSearch(prompt);
+  
+  let searchResults = [];
+  let userPromptWithSearch = prompt;
+
+  if (useWebSearch) {
+    const searchObj = await createPromptWithSearch(prompt);
+    searchResults = searchObj.searchResults;
+    userPromptWithSearch = searchObj.userPromptWithSearch;
+  }
 
   const currentImages = attachments ? attachments.filter(a => a.isImage && a.base64) : [];
   const currentDocs = attachments ? attachments.filter(a => !a.isImage && a.textContent) : [];
