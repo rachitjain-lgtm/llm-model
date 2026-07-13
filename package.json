@@ -1,4 +1,7 @@
 {
+  "scripts": {
+    "dev": "start npm --prefix backend run dev && start npm --prefix llm-chat-frontend run dev"
+  },
   "dependencies": {
     "bcryptjs": "^3.0.3",
     "express-validator": "^7.3.2",
