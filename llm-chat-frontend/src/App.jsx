@@ -41,7 +41,7 @@ function App() {
       }, IDLE_TIMEOUT_MS);
     };
 
-    const activityEvents = ["mousemove", "keydown", "click", "scroll", "touchstart"];
+    const activityEvents = ["mousemove", "keydown", "click", "scroll", "touchstart", "keypress", "mousedown", "pointermove", "input", "focus"];
 
     resetIdleTimer();
 

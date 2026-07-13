@@ -39,7 +39,7 @@ axiosClient.interceptors.response.use(
     const originalRequest = error.config;
 
     if (error.response?.status === 401 && !originalRequest._retry) {
-      if (originalRequest.url === "/auth/refresh-token" || originalRequest.url === "/auth/login") {
+      if (originalRequest.url === "/auth/refresh" || originalRequest.url === "/auth/login") {
         clearSessionAndRedirect();
         return Promise.reject(error);
       }
@@ -67,7 +67,7 @@ axiosClient.interceptors.response.use(
 
       try {
         const res = await axios.post(
-          (import.meta.env.VITE_API_URL || "http://localhost:5000/api") + "/auth/refresh-token",
+          (import.meta.env.VITE_API_URL || "http://localhost:5000/api") + "/auth/refresh",
           { refreshToken }
         );
         const data = res.data?.data || res.data;

@@ -94,7 +94,7 @@ export const chatApi = {
         try {
           const axios = (await import("axios")).default;
           const refreshRes = await axios.post(
-            `${baseURL}/auth/refresh-token`,
+            `${baseURL}/auth/refresh`,
             { refreshToken }
           );
           const data = refreshRes.data?.data || refreshRes.data;
