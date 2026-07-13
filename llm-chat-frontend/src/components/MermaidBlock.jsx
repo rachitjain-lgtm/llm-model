@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import { useEffect, useRef, useState } from "react";
 import mermaid from "mermaid";
 import { Code, BarChart3, RotateCcw, ZoomIn, ZoomOut, Download } from "lucide-react";

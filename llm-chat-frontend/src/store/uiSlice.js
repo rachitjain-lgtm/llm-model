@@ -1,4 +1,4 @@
-﻿import { createSlice } from "@reduxjs/toolkit";
+import { createSlice } from "@reduxjs/toolkit";
 
 const defaultApiSettings = {
   apiKey: "",
@@ -63,7 +63,7 @@ const initialState = {
   providerName: storedApiSettings.providerName,
   apiBaseUrl: storedApiSettings.apiBaseUrl,
   rightPanelOpen: false,
-  regionDropdownOpen: false,
+  providerDropdownOpen: false,
 };
 
 const uiSlice = createSlice({
@@ -132,11 +132,11 @@ const uiSlice = createSlice({
     setRightPanelOpen(state, action) {
       state.rightPanelOpen = action.payload;
     },
-    toggleRegionDropdown(state) {
-      state.regionDropdownOpen = !state.regionDropdownOpen;
+    toggleProviderDropdown(state) {
+      state.providerDropdownOpen = !state.providerDropdownOpen;
     },
-    setRegionDropdownOpen(state, action) {
-      state.regionDropdownOpen = action.payload;
+    setProviderDropdownOpen(state, action) {
+      state.providerDropdownOpen = action.payload;
     },
   },
 });
@@ -160,8 +160,8 @@ export const {
   setAppName,
   toggleRightPanel,
   setRightPanelOpen,
-  toggleRegionDropdown,
-  setRegionDropdownOpen,
+  toggleProviderDropdown,
+  setProviderDropdownOpen,
 } = uiSlice.actions;
 
 export default uiSlice.reducer;

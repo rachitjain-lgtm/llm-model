@@ -1,10 +1,10 @@
-﻿import { useRef, useEffect, useState } from "react";
+import { useRef, useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Menu, ChevronDown, Share2, Check, Edit3, Sun, Moon } from "lucide-react";
-import { toggleSidebar, toggleModelDropdown, setModelDropdownOpen, toggleRegionDropdown, setRegionDropdownOpen, toggleTheme } from "../store/uiSlice";
+import { toggleSidebar, toggleModelDropdown, setModelDropdownOpen, toggleProviderDropdown, setProviderDropdownOpen, toggleTheme } from "../store/uiSlice";
 import { updateChatSettings, renameChat } from "../store/chatSlice";
 import { selectAllProviderProfiles } from "../store/providerSlice";
-import { getModelsForProvider, getModelLabel, getDefaultModelForProvider, getProviderProfileLabel } from "../config/models";
+import { getModelsForProvider, getModelLabel, getDefaultModelForProvider, getProviderProfileLabel, PROVIDER_OPTIONS } from "../config/models";
 
 export default function Topbar() {
   const dispatch = useDispatch();
@@ -15,22 +15,22 @@ export default function Topbar() {
   const sidebarOpen = useSelector((state) => state.ui.sidebarOpen);
 
   const modelDropdownOpen = useSelector((state) => state.ui.modelDropdownOpen);
-  const regionDropdownOpen = useSelector((state) => state.ui.regionDropdownOpen);
+  const providerDropdownOpen = useSelector((state) => state.ui.providerDropdownOpen);
   const theme = useSelector((state) => state.ui.theme);
 
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [titleInput, setTitleInput] = useState("");
 
   const modelRef = useRef(null);
-  const regionRef = useRef(null);
+  const providerRef = useRef(null);
 
   useEffect(() => {
     function handleClickOutside(event) {
       if (modelRef.current && !modelRef.current.contains(event.target)) {
         dispatch(setModelDropdownOpen(false));
       }
-      if (regionRef.current && !regionRef.current.contains(event.target)) {
-        dispatch(setRegionDropdownOpen(false));
+      if (providerRef.current && !providerRef.current.contains(event.target)) {
+        dispatch(setProviderDropdownOpen(false));
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
@@ -61,7 +61,6 @@ export default function Topbar() {
     setIsEditingTitle(false);
   };
 
-  const regions = ["global", "auto"];
   const [copiedToast, setCopiedToast] = useState(false);
 
   const handleShare = () => {
@@ -122,18 +121,27 @@ export default function Topbar() {
           )}
         </div>
 
-        <div className="relative hidden sm:block" ref={regionRef}>
-          <button onClick={() => dispatch(toggleRegionDropdown())} className="h-10 px-3.5 border border-[#E7E7E7] dark:border-[#23272A] hover:border-[#cbd5e1] dark:hover:border-zinc-700 rounded-lg bg-white dark:bg-[#16191B] flex items-center gap-2 text-xs font-semibold text-[#171717] dark:text-[#ECEFF1] shadow-sm transition-colors cursor-pointer">
-            <span>{activeChat.region}</span>
-            <ChevronDown size={14} className={`text-[#737373] dark:text-[#94A3B8] transition-transform duration-200 ${regionDropdownOpen ? "rotate-180" : ""}`} />
+        <div className="relative hidden sm:block" ref={providerRef}>
+          <button onClick={() => dispatch(toggleProviderDropdown())} className="h-10 px-3.5 border border-[#E7E7E7] dark:border-[#23272A] hover:border-[#cbd5e1] dark:hover:border-zinc-700 rounded-lg bg-white dark:bg-[#16191B] flex items-center gap-2 text-xs font-semibold text-[#171717] dark:text-[#ECEFF1] shadow-sm transition-colors cursor-pointer" title="Select Provider">
+            <span>{getProviderProfileLabel(providerProfiles.find((profile) => profile.id === selectedProviderId) || providerProfiles.find((profile) => profile.providerType === selectedProviderId))}</span>
+            <ChevronDown size={14} className={`text-[#737373] dark:text-[#94A3B8] transition-transform duration-200 ${providerDropdownOpen ? "rotate-180" : ""}`} />
           </button>
 
-          {regionDropdownOpen && (
-            <div className="absolute right-0 mt-1.5 w-44 bg-white dark:bg-[#1E2326] border border-[#E7E7E7] dark:border-[#23272A] rounded-lg shadow-lg py-1.5 z-50 transition-colors">
-              {regions.map((r) => (
-                <button key={r} onClick={() => { dispatch(updateChatSettings({ id: activeChat.id, key: "region", value: r })); dispatch(setRegionDropdownOpen(false)); }} className="w-full px-4 py-2 text-xs text-left hover:bg-[#FAFAFA] dark:hover:bg-[#23272A] flex items-center justify-between cursor-pointer">
-                  <span className={activeChat.region === r ? "font-semibold text-[#245955] dark:text-[#347d78]" : "text-[#737373] dark:text-[#94A3B8]"}>{r}</span>
-                  {activeChat.region === r && <Check size={14} className="text-[#245955] dark:text-[#347d78]" />}
+          {providerDropdownOpen && (
+            <div className="absolute right-0 mt-1.5 w-48 bg-white dark:bg-[#1E2326] border border-[#E7E7E7] dark:border-[#23272A] rounded-lg shadow-lg py-1.5 z-50 transition-colors">
+              {PROVIDER_OPTIONS.map((provider) => (
+                <button
+                  key={provider.id}
+                  onClick={() => {
+                    dispatch(updateChatSettings({ id: activeChat.id, key: "provider", value: provider.id }));
+                    const defaultModel = getDefaultModelForProvider(provider.id, providerProfiles);
+                    dispatch(updateChatSettings({ id: activeChat.id, key: "model", value: defaultModel }));
+                    dispatch(setProviderDropdownOpen(false));
+                  }}
+                  className="w-full px-4 py-2.5 text-xs text-left hover:bg-[#FAFAFA] dark:hover:bg-[#23272A] flex items-center justify-between cursor-pointer"
+                >
+                  <span className={selectedProviderId === provider.id ? "font-semibold text-[#245955] dark:text-[#347d78]" : "text-[#737373] dark:text-[#94A3B8]"}>{provider.label}</span>
+                  {selectedProviderId === provider.id && <Check size={14} className="text-[#245955] dark:text-[#347d78]" />}
                 </button>
               ))}
             </div>
