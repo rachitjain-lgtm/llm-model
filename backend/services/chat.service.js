@@ -1,46 +1,52 @@
 const { ObjectId } = require('mongodb');
 const { getDb } = require('../config/database');
 const llmService = require('./llm.service');
+const providerService = require('./provider.service');
 
 const sampleConversations = [
   {
-    title: "AI Assistant overview",
-    model: "google/gemini-2.5-flash",
+    title: 'AI Assistant overview',
+    model: 'google/gemini-2.5-flash',
+    provider: 'openrouter',
     messages: [
-      { sender: "user", content: "Can you explain how this Cloud AI platform works and its key features?" },
-      { sender: "assistant", content: `The Cloud AI platform is a fully managed service that offers a choice of high-performing foundation models (FMs) from leading AI companies through a single API, along with a broad set of capabilities you need to build generative AI applications with security, privacy, and responsible AI.\n\n### Key features\n\n* **Choice of leading foundation models**: Access Claude, Llama, Titan, etc.\n* **Serverless experience**: Fully managed, no infrastructure to set up.\n* **Data privacy and security**: Your data is encrypted and remains within your VPC.\n* **Responsible AI with guardrails**: Implement safety thresholds for content filters.\n* **Knowledge Bases for RAG applications**: Build customized AI connected to your private documentation.\n\nLearn more in the platform documentation.` }
+      { sender: 'user', content: 'Can you explain how this Cloud AI platform works and its key features?' },
+      { sender: 'assistant', content: `The Cloud AI platform is a fully managed service that offers a choice of high-performing foundation models (FMs) from leading AI companies through a single API, along with a broad set of capabilities you need to build generative AI applications with security, privacy, and responsible AI.\n\n### Key features\n\n* **Choice of leading foundation models**: Access Claude, Llama, Titan, etc.\n* **Serverless experience**: Fully managed, no infrastructure to set up.\n* **Data privacy and security**: Your data is encrypted and remains within your VPC.\n* **Responsible AI with guardrails**: Implement safety thresholds for content filters.\n* **Knowledge Bases for RAG applications**: Build customized AI connected to your private documentation.\n\nLearn more in the platform documentation.` }
     ]
   },
   {
-    title: "Compare Claude vs Llama",
-    model: "google/gemini-2.5-flash",
+    title: 'Compare Claude vs Llama',
+    model: 'google/gemini-2.5-flash',
+    provider: 'openrouter',
     messages: [
-      { sender: "user", content: "Compare Claude 3 Sonnet vs Llama 3 70B" },
-      { sender: "assistant", content: `Here is a quick comparison of Claude 3 Sonnet and Llama 3 70B:\n\n1. **Developer**: Claude 3 Sonnet is created by Anthropic, while Llama 3 70B is created by Meta.\n2. **Strengths**: Claude is outstanding for complex reasoning, multilingual processing, and writing clean code. Llama 3 70B is highly cost-effective and performs exceptionally for dialogue, summarization, and general instructions.\n3. **Context Window**: Claude 3 Sonnet supports up to 200k tokens, providing robust long-document support. Llama 3 70B supports 8k tokens.` }
+      { sender: 'user', content: 'Compare Claude 3 Sonnet vs Llama 3 70B' },
+      { sender: 'assistant', content: `Here is a quick comparison of Claude 3 Sonnet and Llama 3 70B:\n\n1. **Developer**: Claude 3 Sonnet is created by Anthropic, while Llama 3 70B is created by Meta.\n2. **Strengths**: Claude is outstanding for complex reasoning, multilingual processing, and writing clean code. Llama 3 70B is highly cost-effective and performs exceptionally for dialogue, summarization, and general instructions.\n3. **Context Window**: Claude 3 Sonnet supports up to 200k tokens, providing robust long-document support. Llama 3 70B supports 8k tokens.` }
     ]
   },
   {
-    title: "Summarize product docs",
-    model: "google/gemini-2.5-flash",
+    title: 'Summarize product docs',
+    model: 'google/gemini-2.5-flash',
+    provider: 'openrouter',
     messages: [
-      { sender: "user", content: "Can you help me summarize my product docs?" },
-      { sender: "assistant", content: "Sure! Please paste the product documentation here, or verify that your Product Docs Knowledge Base is turned on in the bottom composer or the run controls panel so I can reference it." }
+      { sender: 'user', content: 'Can you help me summarize my product docs?' },
+      { sender: 'assistant', content: 'Sure! Please paste the product documentation here, or verify that your Product Docs Knowledge Base is turned on in the bottom composer or the run controls panel so I can reference it.' }
     ]
   },
   {
-    title: "Create SQL query",
-    model: "google/gemini-2.5-flash",
+    title: 'Create SQL query',
+    model: 'google/gemini-2.5-flash',
+    provider: 'openrouter',
     messages: [
-      { sender: "user", content: "Write a SQL query to find users who signed up in the last 30 days and ordered more than $100." },
-      { sender: "assistant", content: `Here is the SQL query to retrieve that user list:\n\n\`\`\`sql\nSELECT u.id, u.name, u.email, SUM(o.amount) as total_spent\nFROM users u\nJOIN orders o ON u.id = o.user_id\nWHERE u.signup_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)\nGROUP BY u.id\nHAVING total_spent > 100;\n\`\`\`` }
+      { sender: 'user', content: 'Write a SQL query to find users who signed up in the last 30 days and ordered more than $100.' },
+      { sender: 'assistant', content: `Here is the SQL query to retrieve that user list:\n\n\`\`\`sql\nSELECT u.id, u.name, u.email, SUM(o.amount) as total_spent\nFROM users u\nJOIN orders o ON u.id = o.user_id\nWHERE u.signup_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)\nGROUP BY u.id\nHAVING total_spent > 100;\n\`\`\`` }
     ]
   },
   {
-    title: "Marketing campaign ideas",
-    model: "google/gemini-2.5-flash",
+    title: 'Marketing campaign ideas',
+    model: 'google/gemini-2.5-flash',
+    provider: 'openrouter',
     messages: [
-      { sender: "user", content: "List 5 creative ideas for B2B SaaS launch campaign." },
-      { sender: "assistant", content: `Here are 5 creative campaign ideas for your B2B SaaS launch:\n\n1. **The Interactive Audit Tool**: A quick 2-minute calculator showing prospects exactly where they are losing revenue, leading directly to your signup flow.\n2. **Private Beta Behind-the-Scenes Vlogs**: A weekly series featuring founders discussing scaling challenges, humanizing the product and generating organic traction.\n3. **The "Anti-Complexity" Web Series**: Short, funny videos highlighting the manual processes your tool eliminates.\n4. **Industry Leader Roundtable**: Invite top minds for a virtual panel on current issues, showcasing your SaaS as a thought leader in the space.\n5. **Co-branded Infographics**: Partner with a non-competing tool to co-publish an insightful industry dataset, widening your reach.` }
+      { sender: 'user', content: 'List 5 creative ideas for B2B SaaS launch campaign.' },
+      { sender: 'assistant', content: `Here are 5 creative campaign ideas for your B2B SaaS launch:\n\n1. **The Interactive Audit Tool**: A quick 2-minute calculator showing prospects exactly where they are losing revenue, leading directly to your signup flow.\n2. **Private Beta Behind-the-Scenes Vlogs**: A weekly series featuring founders discussing scaling challenges, humanizing the product and generating organic traction.\n3. **The \"Anti-Complexity\" Web Series**: Short, funny videos highlighting the manual processes your tool eliminates.\n4. **Industry Leader Roundtable**: Invite top minds for a virtual panel on current issues, showcasing your SaaS as a thought leader in the space.\n5. **Co-branded Infographics**: Partner with a non-competing tool to co-publish an insightful industry dataset, widening your reach.` }
     ]
   }
 ];
@@ -51,8 +57,7 @@ const getUserChats = async (userId, userEmail) => {
   const messagesCollection = db.collection('messages');
 
   let chats = await chatsCollection.find({ userId: new ObjectId(userId) }).sort({ updatedAt: -1 }).toArray();
-  
-  // Seeding logic: ONLY aashipndy1710@gmail.com gets demo sample chats if 0 chats exist.
+
   if (chats.length === 0) {
     if (userEmail && userEmail.toLowerCase().trim() === 'aashipndy1710@gmail.com') {
       for (const sample of sampleConversations) {
@@ -60,7 +65,7 @@ const getUserChats = async (userId, userEmail) => {
           userId: new ObjectId(userId),
           title: sample.title,
           model: sample.model,
-          provider: 'Cloud AI',
+          provider: sample.provider,
           settings: { maxTokens: 4096, temperature: 0.7, useGuardrails: true, useKnowledgeBase: false },
           createdAt: new Date(),
           updatedAt: new Date(),
@@ -76,12 +81,11 @@ const getUserChats = async (userId, userEmail) => {
         }
       }
     } else {
-      // For all other new users, seed 1 empty chat so onboarding cards ("Choose model") render automatically
       await chatsCollection.insertOne({
         userId: new ObjectId(userId),
         title: 'New Conversation',
         model: 'google/gemini-2.5-flash',
-        provider: 'Cloud AI',
+        provider: 'openrouter',
         settings: { maxTokens: 4096, temperature: 0.7, useGuardrails: true, useKnowledgeBase: false },
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -90,7 +94,6 @@ const getUserChats = async (userId, userEmail) => {
     chats = await chatsCollection.find({ userId: new ObjectId(userId) }).sort({ updatedAt: -1 }).toArray();
   }
 
-  // Attach messages
   const result = await Promise.all(
     chats.map(async (chat) => {
       const messages = await messagesCollection.find({ chatId: chat._id }).sort({ createdAt: 1 }).toArray();
@@ -98,7 +101,7 @@ const getUserChats = async (userId, userEmail) => {
         id: chat._id.toString(),
         title: chat.title,
         model: chat.model || 'google/gemini-2.5-flash',
-        provider: chat.provider || 'Cloud AI',
+        provider: chat.provider || 'openrouter',
         settings: chat.settings || {},
         createdAt: chat.createdAt,
         updatedAt: chat.updatedAt,
@@ -120,9 +123,7 @@ const getUserChats = async (userId, userEmail) => {
 const getChatById = async (chatId, userId) => {
   const db = getDb();
   const chat = await db.collection('chats').findOne({ _id: new ObjectId(chatId), userId: new ObjectId(userId) });
-  if (!chat) {
-    throw new Error('Chat not found');
-  }
+  if (!chat) throw new Error('Chat not found');
   const messages = await db.collection('messages').find({ chatId: chat._id }).sort({ createdAt: 1 }).toArray();
   return {
     id: chat._id.toString(),
@@ -148,7 +149,7 @@ const createChat = async (userId, data = {}) => {
     userId: new ObjectId(userId),
     title: data.title || 'New Conversation',
     model: data.model || 'google/gemini-2.5-flash',
-    provider: data.provider || 'Cloud AI',
+    provider: data.provider || 'openrouter',
     settings: data.settings || { maxTokens: 4096, temperature: 0.7, useGuardrails: true, useKnowledgeBase: false },
     createdAt: new Date(),
     updatedAt: new Date(),
@@ -171,11 +172,7 @@ const toObjectId = (id) => {
   if (!id) return null;
   if (typeof id === 'object' && id instanceof ObjectId) return id;
   if (typeof id === 'string' && ObjectId.isValid(id) && id.length === 24) {
-    try {
-      return new ObjectId(id);
-    } catch (e) {
-      return null;
-    }
+    try { return new ObjectId(id); } catch (e) { return null; }
   }
   return null;
 };
@@ -184,10 +181,7 @@ const renameChat = async (chatId, userId, title) => {
   const db = getDb();
   const objChatId = toObjectId(chatId);
   const objUserId = toObjectId(userId);
-
-  if (!objChatId || !objUserId) {
-    return { id: chatId, title };
-  }
+  if (!objChatId || !objUserId) return { id: chatId, title };
 
   const result = await db.collection('chats').findOneAndUpdate(
     { _id: objChatId, userId: objUserId },
@@ -204,14 +198,9 @@ const updateChatSettings = async (chatId, userId, settings) => {
   const objUserId = toObjectId(userId);
 
   const chat = objChatId && objUserId ? await db.collection('chats').findOne({ _id: objChatId, userId: objUserId }) : null;
-  if (!chat) {
-    return { id: chatId, settings };
-  }
+  if (!chat) return { id: chatId, settings };
   const updatedSettings = { ...chat.settings, ...settings };
-  await db.collection('chats').updateOne(
-    { _id: objChatId },
-    { $set: { settings: updatedSettings, updatedAt: new Date() } }
-  );
+  await db.collection('chats').updateOne({ _id: objChatId }, { $set: { settings: updatedSettings, updatedAt: new Date() } });
   return { ...chat, settings: updatedSettings };
 };
 
@@ -219,7 +208,6 @@ const deleteChat = async (chatId, userId) => {
   const db = getDb();
   const objChatId = toObjectId(chatId);
   const objUserId = toObjectId(userId);
-
   if (objChatId && objUserId) {
     await db.collection('chats').deleteOne({ _id: objChatId, userId: objUserId });
     await db.collection('messages').deleteMany({ chatId: objChatId });
@@ -253,10 +241,7 @@ const addMessageToChat = async (chatId, userId, { sender, content, tokens, image
 
   const result = await db.collection('messages').insertOne(newMessage);
 
-  await db.collection('chats').updateOne(
-    { _id: objChatId },
-    { $set: { updatedAt: new Date() } }
-  );
+  await db.collection('chats').updateOne({ _id: objChatId }, { $set: { updatedAt: new Date() } });
 
   return {
     id: result.insertedId.toString(),
@@ -268,52 +253,47 @@ const addMessageToChat = async (chatId, userId, { sender, content, tokens, image
   };
 };
 
+const resolveProviderForChat = async (providerValue, userId) => {
+  return providerService.getProviderProfileById(providerValue, userId);
+};
+
 const generateChatResponse = async (chatId, userId, payload) => {
   const db = getDb();
   const objChatId = toObjectId(chatId);
   const objUserId = toObjectId(userId);
-
   const chat = objChatId && objUserId ? await db.collection('chats').findOne({ _id: objChatId, userId: objUserId }) : null;
 
-  // 1. Fetch current chat turn history
   let chatHistory = [];
   if (objChatId) {
-    const prevMsgs = await db.collection('messages')
-      .find({ chatId: objChatId })
-      .sort({ createdAt: 1 })
-      .toArray();
+    const prevMsgs = await db.collection('messages').find({ chatId: objChatId }).sort({ createdAt: 1 }).toArray();
     chatHistory = prevMsgs.map(m => ({ sender: m.sender, content: m.content }));
   }
 
-  // 2. Cross-chat memory if user asks about other/past chats
-  let otherChatsSummary = "";
+  let otherChatsSummary = '';
   const isCrossChatQuery = /previous chat|other chat|past chat|my chats|earlier chat|my previous conversation|what did we discuss|other conversation/i.test(payload.prompt);
 
   if (isCrossChatQuery && objUserId) {
-    const otherChats = await db.collection('chats')
-      .find({ userId: objUserId, _id: { $ne: objChatId } })
-      .sort({ updatedAt: -1 })
-      .limit(6)
-      .toArray();
-
+    const otherChats = await db.collection('chats').find({ userId: objUserId, _id: { $ne: objChatId } }).sort({ updatedAt: -1 }).limit(6).toArray();
     if (otherChats.length > 0) {
-      const summaries = await Promise.all(
-        otherChats.map(async (c) => {
-          const msgs = await db.collection('messages')
-            .find({ chatId: c._id })
-            .sort({ createdAt: 1 })
-            .limit(6)
-            .toArray();
-          const msgsText = msgs.map(m => `${m.sender}: ${m.content}`).join('\n');
-          return `Chat Title: "${c.title}"\nMessages:\n${msgsText}`;
-        })
-      );
+      const summaries = await Promise.all(otherChats.map(async (c) => {
+        const msgs = await db.collection('messages').find({ chatId: c._id }).sort({ createdAt: 1 }).limit(6).toArray();
+        const msgsText = msgs.map(m => `${m.sender}: ${m.content}`).join('\n');
+        return `Chat Title: "${c.title}"\nMessages:\n${msgsText}`;
+      }));
       otherChatsSummary = summaries.join('\n\n---\n\n');
     }
   }
 
+  const providerProfile = await resolveProviderForChat(payload.provider || chat?.provider || 'openrouter', userId);
+  const providerType = providerProfile?.providerType || payload.provider || chat?.provider || 'openrouter';
+  const providerModels = providerProfile?.models || [];
+  const fallbackModel = providerModels[0]?.id || 'google/gemini-2.5-flash';
+  const selectedModel = payload.model || chat?.model || fallbackModel;
+
   const response = await llmService.generateResponse({
-    model: payload.model || chat?.model || 'google/gemini-2.5-flash',
+    provider: providerType,
+    providerProfile,
+    model: selectedModel,
     prompt: payload.prompt,
     chatHistory,
     otherChatsSummary,
@@ -328,9 +308,7 @@ const generateChatResponse = async (chatId, userId, payload) => {
 
   return {
     text: response.text,
-    sources: response.sources || (payload.useKnowledgeBase && payload.activeKbTitle
-      ? [{ title: payload.activeKbTitle, url: "#" }]
-      : null)
+    sources: response.sources || (payload.useKnowledgeBase && payload.activeKbTitle ? [{ title: payload.activeKbTitle, url: '#' }] : null)
   };
 };
 
@@ -338,48 +316,39 @@ const generateStreamChatResponse = async (chatId, userId, payload, onChunk) => {
   const db = getDb();
   const objChatId = toObjectId(chatId);
   const objUserId = toObjectId(userId);
-
   const chat = objChatId && objUserId ? await db.collection('chats').findOne({ _id: objChatId, userId: objUserId }) : null;
 
-  // 1. Fetch current chat turn history
   let chatHistory = [];
   if (objChatId) {
-    const prevMsgs = await db.collection('messages')
-      .find({ chatId: objChatId })
-      .sort({ createdAt: 1 })
-      .toArray();
+    const prevMsgs = await db.collection('messages').find({ chatId: objChatId }).sort({ createdAt: 1 }).toArray();
     chatHistory = prevMsgs.map(m => ({ sender: m.sender, content: m.content }));
   }
 
-  // 2. Cross-chat memory if user asks about other/past chats
-  let otherChatsSummary = "";
+  let otherChatsSummary = '';
   const isCrossChatQuery = /previous chat|other chat|past chat|my chats|earlier chat|my previous conversation|what did we discuss|other conversation/i.test(payload.prompt);
 
   if (isCrossChatQuery && objUserId) {
-    const otherChats = await db.collection('chats')
-      .find({ userId: objUserId, _id: { $ne: objChatId } })
-      .sort({ updatedAt: -1 })
-      .limit(6)
-      .toArray();
-
+    const otherChats = await db.collection('chats').find({ userId: objUserId, _id: { $ne: objChatId } }).sort({ updatedAt: -1 }).limit(6).toArray();
     if (otherChats.length > 0) {
-      const summaries = await Promise.all(
-        otherChats.map(async (c) => {
-          const msgs = await db.collection('messages')
-            .find({ chatId: c._id })
-            .sort({ createdAt: 1 })
-            .limit(6)
-            .toArray();
-          const msgsText = msgs.map(m => `${m.sender}: ${m.content}`).join('\n');
-          return `Chat Title: "${c.title}"\nMessages:\n${msgsText}`;
-        })
-      );
+      const summaries = await Promise.all(otherChats.map(async (c) => {
+        const msgs = await db.collection('messages').find({ chatId: c._id }).sort({ createdAt: 1 }).limit(6).toArray();
+        const msgsText = msgs.map(m => `${m.sender}: ${m.content}`).join('\n');
+        return `Chat Title: "${c.title}"\nMessages:\n${msgsText}`;
+      }));
       otherChatsSummary = summaries.join('\n\n---\n\n');
     }
   }
 
+  const providerProfile = await resolveProviderForChat(payload.provider || chat?.provider || 'openrouter', userId);
+  const providerType = providerProfile?.providerType || payload.provider || chat?.provider || 'openrouter';
+  const providerModels = providerProfile?.models || [];
+  const fallbackModel = providerModels[0]?.id || 'google/gemini-2.5-flash';
+  const selectedModel = payload.model || chat?.model || fallbackModel;
+
   const response = await llmService.generateStreamResponse({
-    model: payload.model || chat?.model || 'google/gemini-2.5-flash',
+    provider: providerType,
+    providerProfile,
+    model: selectedModel,
     prompt: payload.prompt,
     chatHistory,
     otherChatsSummary,
@@ -394,9 +363,7 @@ const generateStreamChatResponse = async (chatId, userId, payload, onChunk) => {
 
   return {
     text: response.text,
-    sources: response.sources || (payload.useKnowledgeBase && payload.activeKbTitle
-      ? [{ title: payload.activeKbTitle, url: "#" }]
-      : null)
+    sources: response.sources || (payload.useKnowledgeBase && payload.activeKbTitle ? [{ title: payload.activeKbTitle, url: '#' }] : null)
   };
 };
 
@@ -411,6 +378,3 @@ module.exports = {
   generateChatResponse,
   generateStreamChatResponse,
 };
-
-
-

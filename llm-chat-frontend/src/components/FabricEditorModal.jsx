@@ -10,40 +10,49 @@ export default function FabricEditorModal({ imageUrl, onClose }) {
   const [history, setHistory] = useState([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
   const [fabricLoaded, setFabricLoaded] = useState(false);
+  const [fabricError, setFabricError] = useState("");
 
   const colors = ["#245955", "#ef4444", "#3b82f6", "#f97316", "#8b5cf6", "#eab308", "#000000", "#ffffff"];
 
-  // Dynamically load fabric.js
   useEffect(() => {
-    import("fabric").then(({ fabric }) => {
-      if (!canvasRef.current) return;
+    const fabric = window.fabric;
 
-      const canvas = new fabric.Canvas(canvasRef.current, {
-        width: 800,
-        height: 500,
-        backgroundColor: "#ffffff",
-        selection: true,
-      });
-      fabricRef.current = { canvas, fabric };
+    if (!fabric) {
+      setFabricError("Fabric.js is not available in this build.");
+      return undefined;
+    }
 
-      // Load image if provided
-      if (imageUrl) {
-        fabric.Image.fromURL(imageUrl, (img) => {
+    if (!canvasRef.current) return undefined;
+
+    const canvas = new fabric.Canvas(canvasRef.current, {
+      width: 800,
+      height: 500,
+      backgroundColor: "#ffffff",
+      selection: true,
+    });
+
+    fabricRef.current = { canvas, fabric };
+
+    if (imageUrl) {
+      fabric.Image.fromURL(
+        imageUrl,
+        (img) => {
           const scale = Math.min(800 / img.width, 500 / img.height, 1);
           img.scale(scale);
           img.set({ left: (800 - img.width * scale) / 2, top: (500 - img.height * scale) / 2, selectable: true });
           canvas.add(img);
           canvas.renderAll();
           saveHistory(canvas);
-        }, { crossOrigin: "anonymous" });
-      } else {
-        saveHistory(canvas);
-      }
+        },
+        { crossOrigin: "anonymous" }
+      );
+    } else {
+      saveHistory(canvas);
+    }
 
-      setFabricLoaded(true);
+    setFabricLoaded(true);
 
-      return () => canvas.dispose();
-    });
+    return () => canvas.dispose();
   }, [imageUrl]);
 
   const saveHistory = (canvas) => {
@@ -102,7 +111,12 @@ export default function FabricEditorModal({ imageUrl, onClose }) {
     if (!fabricRef.current) return;
     const { canvas, fabric } = fabricRef.current;
     const text = new fabric.IText("Edit this text", {
-      left: 200, top: 200, fontFamily: "Inter, sans-serif", fill: activeColor, fontSize: 20, fontWeight: "600",
+      left: 200,
+      top: 200,
+      fontFamily: "Inter, sans-serif",
+      fill: activeColor,
+      fontSize: 20,
+      fontWeight: "600",
     });
     canvas.add(text);
     canvas.setActiveObject(text);
@@ -169,7 +183,7 @@ export default function FabricEditorModal({ imageUrl, onClose }) {
     const active = canvas.getActiveObjects();
     active.forEach((obj) => {
       if (obj.type === "i-text" || obj.type === "text") obj.set("fill", color);
-      else { obj.set("stroke", color); }
+      else obj.set("stroke", color);
     });
     canvas.renderAll();
   };
@@ -177,8 +191,6 @@ export default function FabricEditorModal({ imageUrl, onClose }) {
   return (
     <div className="fixed inset-0 z-[200] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
       <div className="bg-white dark:bg-[#16191B] rounded-2xl shadow-2xl border border-[#E5E5E5] dark:border-[#2D3136] overflow-hidden flex flex-col" style={{ width: "min(950px, 95vw)", maxHeight: "95vh" }}>
-        
-        {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-[#E5E5E5] dark:border-[#2D3136] bg-[#F5F7F7] dark:bg-[#1A1D21]">
           <div className="flex items-center gap-2">
             <div className="w-6 h-6 rounded bg-[#245955] flex items-center justify-center">
@@ -200,12 +212,10 @@ export default function FabricEditorModal({ imageUrl, onClose }) {
           </div>
         </div>
 
-        {/* Toolbar */}
         <div className="flex items-center gap-2 px-4 py-2 border-b border-[#E5E5E5] dark:border-[#2D3136] bg-white dark:bg-[#16191B] flex-wrap">
-          {/* Tools */}
           <div className="flex items-center gap-1 bg-[#F5F7F7] dark:bg-[#1A1D21] rounded-lg p-1">
             {[
-              { id: "select", icon: null, label: "↖", title: "Select" },
+              { id: "select", icon: null, label: "SW", title: "Select" },
               { id: "pen", icon: <Pencil size={13} />, title: "Draw" },
               { id: "eraser", icon: <Eraser size={13} />, title: "Eraser" },
             ].map((t) => (
@@ -220,7 +230,6 @@ export default function FabricEditorModal({ imageUrl, onClose }) {
             ))}
           </div>
 
-          {/* Shapes */}
           <div className="flex items-center gap-1 bg-[#F5F7F7] dark:bg-[#1A1D21] rounded-lg p-1">
             <button onClick={() => addShape("rect")} title="Rectangle" className="p-1.5 rounded-md hover:bg-[#E7F3F1] dark:hover:bg-[#23272A] text-[#737373] dark:text-[#94A3B8] transition-colors"><Square size={13} /></button>
             <button onClick={() => addShape("circle")} title="Circle" className="p-1.5 rounded-md hover:bg-[#E7F3F1] dark:hover:bg-[#23272A] text-[#737373] dark:text-[#94A3B8] transition-colors"><Circle size={13} /></button>
@@ -228,7 +237,6 @@ export default function FabricEditorModal({ imageUrl, onClose }) {
             <button onClick={addText} title="Add text" className="p-1.5 rounded-md hover:bg-[#E7F3F1] dark:hover:bg-[#23272A] text-[#737373] dark:text-[#94A3B8] transition-colors"><Type size={13} /></button>
           </div>
 
-          {/* Color Picker */}
           <div className="flex items-center gap-1">
             {colors.map((c) => (
               <button
@@ -248,18 +256,22 @@ export default function FabricEditorModal({ imageUrl, onClose }) {
             />
           </div>
 
-          {/* Brush size */}
           <div className="flex items-center gap-2">
             <span className="text-[10px] text-[#94A3B8]">Size:</span>
             <input
-              type="range" min={1} max={30} value={brushSize}
-              onChange={(e) => { setBrushSize(Number(e.target.value)); if (fabricRef.current?.canvas?.freeDrawingBrush) fabricRef.current.canvas.freeDrawingBrush.width = Number(e.target.value); }}
+              type="range"
+              min={1}
+              max={30}
+              value={brushSize}
+              onChange={(e) => {
+                setBrushSize(Number(e.target.value));
+                if (fabricRef.current?.canvas?.freeDrawingBrush) fabricRef.current.canvas.freeDrawingBrush.width = Number(e.target.value);
+              }}
               className="w-20 accent-[#245955]"
             />
             <span className="text-[10px] text-[#94A3B8] w-4">{brushSize}</span>
           </div>
 
-          {/* History / Delete */}
           <div className="flex items-center gap-1 ml-auto">
             <button onClick={undo} disabled={historyIndex <= 0} title="Undo" className="p-1.5 rounded-md hover:bg-[#E7F3F1] dark:hover:bg-[#23272A] text-[#737373] dark:text-[#94A3B8] disabled:opacity-30 transition-colors"><Undo2 size={13} /></button>
             <button onClick={redo} disabled={historyIndex >= history.length - 1} title="Redo" className="p-1.5 rounded-md hover:bg-[#E7F3F1] dark:hover:bg-[#23272A] text-[#737373] dark:text-[#94A3B8] disabled:opacity-30 transition-colors"><Redo2 size={13} /></button>
@@ -267,19 +279,17 @@ export default function FabricEditorModal({ imageUrl, onClose }) {
           </div>
         </div>
 
-        {/* Canvas */}
         <div className="flex-1 overflow-auto flex items-center justify-center bg-[#F0F0F0] dark:bg-[#0f1214] p-4">
-          {!fabricLoaded && (
+          {fabricError ? (
+            <div className="text-sm text-[#737373] dark:text-[#94A3B8]">{fabricError}</div>
+          ) : !fabricLoaded ? (
             <div className="flex items-center gap-2 text-[#94A3B8] text-sm">
               <div className="w-5 h-5 border-2 border-[#245955] border-t-transparent rounded-full animate-spin" />
-              <span>Loading editor…</span>
+              <span>Loading editor...</span>
             </div>
+          ) : (
+            <canvas ref={canvasRef} className="rounded-lg shadow-lg" style={{ display: "block", maxWidth: "100%", background: "#fff" }} />
           )}
-          <canvas
-            ref={canvasRef}
-            className="rounded-lg shadow-lg"
-            style={{ display: fabricLoaded ? "block" : "none", maxWidth: "100%", background: "#fff" }}
-          />
         </div>
       </div>
     </div>

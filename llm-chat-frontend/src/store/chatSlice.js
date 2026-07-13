@@ -169,7 +169,7 @@ const chatSlice = createSlice({
         title: "New chat",
         timestamp: "Today, " + new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
         model: DEFAULT_MODEL_ID,
-        provider: "OpenRouter",
+        provider: "openrouter",
         region: "global",
         temperature: 0.7,
         maxTokens: 4096,
@@ -371,3 +371,4 @@ export const {
 } = chatSlice.actions;
 
 export default chatSlice.reducer;
+

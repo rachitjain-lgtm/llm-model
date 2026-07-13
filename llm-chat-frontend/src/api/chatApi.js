@@ -58,7 +58,6 @@ export const chatApi = {
   sendMessageStream: async ({
     conversation,
     prompt,
-    streamingOn,
     activeKb,
     signal
   }, onChunk, onDone) => {
@@ -74,6 +73,7 @@ export const chatApi = {
       },
       body: JSON.stringify({
         prompt,
+        provider: conversation.provider,
         model: conversation.model,
         temperature: conversation.temperature,
         maxTokens: conversation.maxTokens,
@@ -132,3 +132,4 @@ export const chatApi = {
     onDone(accumulatedText || "The model returned an empty response.", finalSources);
   }
 };
+
